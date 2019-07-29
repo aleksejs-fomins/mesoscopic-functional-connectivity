@@ -1,0 +1,60 @@
+-----------------------------------------------
+How to run IDTXL in parallel on ScienceCloud
+-----------------------------------------------
+
+1)
+   If your home computer is Linux, go to bash shell and execute following command
+     ssh -X -L localhost:2351:localhost:2351 -i aleksejs-yaro-key.pem ubuntu@172.23.126.132
+   If your home computer if Windows, install Putty and attempt to replicate this command using it
+     [TODO: Windows User: Write down detailed instructions here and push repository to git]
+     
+2) Inside the ScienceCloud Machine Terminal
+* run command: screen
+* press space
+* run command: ipython notebook --no-browser --port=2351
+* copy url containing word "token", paste it into your browser
+* Back in the terminal, press CTRL+A, then press CTRL+D
+
+3) Inside Jupyter on browser
+* go to /work/nest-mesoscopic-metric-test/codes/analysis_real/yaro_te_idtxl-swipe-multi.ipynb
+* specify parameters, run code, you will be asked to select folders for analysis. Click cancel when you have selected all folders you want to analyze
+* Note: remote server is located in /mnt/hifo-scratch-01/Yaro/data_for_TE/...
+
+4) When you get bored of waiting
+* Click CTRL-S inside the jupyter notebook
+* Close all browser windows containing jupyter, ignore all warnings
+* Inside terminal, type "exit" several times, until terminal closes
+
+If no mistakes were made, your code will continue to run on the server even after your home computer is turned off
+
+-----------------------------------------------
+How to open the "screen" session some time later
+-----------------------------------------------
+
+1) Repeat step 1 from above
+2) Inside the ScienceCloud Machine Terminal:
+* run command: ipython
+* Inside ipython: run command: system("jupyter" "notebook" "list")
+* Copy url containing "token", paste into your browser
+* Inside ipython: run command: exit()
+3) Inside Jupyter on browser
+* go to /work/nest-mesoscopic-metric-test/codes/analysis_real/yaro_te_idtxl-swipe-multi.ipynb
+* It should still be running, unless it is finished. Inside its folder, there are log files, you can check when was the most recent one created
+* If you want, you can run analysis_real/checklog.ipynb to find out the % of completion from a log file
+4) If you are done with your simulations, in terminal do the following
+* run command: screen -r
+* type CTRL-C, yes, enter
+* once jupyter has closed on the terminal, run command "exit" multiple times until everything has closed
+
+-----------------------------------------------
+How to copy my results
+-----------------------------------------------
+
+1) Repeat step 1 from above
+2) Inside terminal, type "thunar"
+3) Inside thunar, copy directory /work/nest-mesoscopic-metric-test/sim_ds_h5 to /mnt/hifo-scratch-01/Yaro/...
+* Note: If you are using Windows, thunar will not work unless you have an X-server installed. Instead, you could use terminal: cp -R source/folder target/folder
+
+
+
+

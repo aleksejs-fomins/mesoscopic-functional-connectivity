@@ -1,0 +1,343 @@
+% Fig. pool selected mice and calculate clustering
+
+% add folders containing required scripts to the current MATLAB path
+% required scripts:
+%   - uigetfile_n_dir.m
+%   - network_threshold.m
+cd 'G:\mtp_TE'
+path_raw = pwd;
+
+% define thresholds
+network_p_threshold = 0.01;
+network_performance_threshold = 0.8;
+
+% define as 0 for naive animals i.e. pool sessions below the performance threshold
+% define as 1 for expert animals i.e. pool sessions above the performance threshold
+perf_def = 1;
+
+% select mice folders
+[paths_mice] = uigetfile_n_dir('','Select mice folders');
+mice = length(paths_mice);
+
+% get mouse ID
+mouse_IDs = cell([1,mice]);
+for count_mice = 1:mice
+    [~,mouse_IDs{count_mice},~] = fileparts(paths_mice{count_mice});
+end
+
+% import all channel labels for comparison
+channel_labels_all = cell([1,mice]);
+for count_mice = 1:mice
+    temp_file_name = fullfile(paths_mice{count_mice},'channel_labels.mat');
+    if exist(temp_file_name,'file')
+        temp = load(temp_file_name);
+        channel_labels_all{count_mice} = temp.channel_labels;
+    else
+        error('ERROR: channel_labels.mat file missing in folder: %s',paths_mice{count_mice})
+    end
+end
+
+% find shared channel labels among all mice
+channel_labels_shared = channel_labels_all{1};
+for count_mice = 1:mice
+    channel_labels_shared = intersect(channel_labels_shared,channel_labels_all{count_mice},'stable');
+end
+
+% find the indices(positions) of the shared labels in each mouse channel labels
+channel_labels_all_indices = cell([1,mice]);
+for count_mice = 1:mice
+    [~,~,channel_labels_all_indices{count_mice}] = intersect(channel_labels_shared,channel_labels_all{count_mice},'stable');
+end
+
+
+for count_mice = 1:mice
+        
+        % Get a list of all files and folders in the mouse folder
+        all_files = dir(paths_mice{count_mice});
+        % Remove . and .. folders
+        all_files(1:2) = [];
+        % Get a logical vector that tells which is a directory
+        dirFlags = [all_files.isdir];
+        % Extract only those that are directories.
+        sessions_IDs = {all_files(dirFlags).name};
+        sessions = length(sessions_IDs);
+        
+        mouse_ID= mouse_IDs{count_mice};
+        
+
+
+        [network_total_links{count_mice},network_shared_links{count_mice},...
+            network_shared_links_p_value{count_mice},network_unique_links{count_mice},performance{count_mice}]...
+            = do_links_analysis(path_raw,mouse_ID,sessions_IDs);
+                
+        % find high/low performance sessions
+    
+        high_perf_sessions_indices = find(performance{count_mice} > network_performance_threshold);     
+        low_perf_sessions_indices = find(performance{count_mice} < network_performance_threshold);      
+
+        CUE=1;
+        TEX=2;
+        LIK=3;
+        
+        % pool over high/low performance sessions
+        
+    %---------------------------  
+    %--- update total links ---
+    %---------------------------
+    
+        total_links_high.GO.TEX(count_mice) ...
+            = mean(network_total_links{1,count_mice}.GO(high_perf_sessions_indices,TEX));
+        
+        total_links_low.GO.TEX(count_mice) ...
+            = mean(network_total_links{1,count_mice}.GO(low_perf_sessions_indices,TEX));
+        
+        total_links_high.NOGO.TEX(count_mice) ...
+            = mean(network_total_links{1,count_mice}.NOGO(high_perf_sessions_indices,TEX));
+        
+        total_links_low.NOGO.TEX(count_mice) ...
+            = mean(network_total_links{1,count_mice}.NOGO(low_perf_sessions_indices,TEX));
+
+        total_links_variance_high.GO.TEX(count_mice) ...
+            = std(network_total_links{1,count_mice}.GO(high_perf_sessions_indices,TEX),'omitnan');
+        
+        total_links_variance_low.GO.TEX(count_mice) ...
+            = std(network_total_links{1,count_mice}.GO(low_perf_sessions_indices,TEX),'omitnan');
+        
+        total_links_variance_high.NOGO.TEX(count_mice) ...
+            = std(network_total_links{1,count_mice}.NOGO(high_perf_sessions_indices,TEX),'omitnan');
+        
+        total_links_variance_low.NOGO.TEX(count_mice) ...
+            = std(network_total_links{1,count_mice}.NOGO(low_perf_sessions_indices,TEX),'omitnan');
+
+        
+    %---------------------------  
+    %--- update shared links ---
+    %---------------------------       
+    
+        if performance{count_mice}(1)< network_performance_threshold
+            low_perf_shared_sessions_indices =low_perf_sessions_indices(1:end-1);
+            high_perf_shared_sessions_indices = high_perf_sessions_indices(1:end-1);
+        else
+            % --- use a first session as learning           --- 
+            % --- if mouse has no low performance sessions  --- 
+            
+            high_perf_shared_sessions_indices = high_perf_sessions_indices(2:end-1);
+            low_perf_shared_sessions_indices = 1;
+        end
+            
+        shared_links_high.GO.TEX(count_mice) ...
+            = mean(network_shared_links{1,count_mice}.GO(high_perf_shared_sessions_indices,TEX));
+        
+        shared_links_low.GO.TEX(count_mice) ...
+            = mean(network_shared_links{1,count_mice}.GO(low_perf_shared_sessions_indices,TEX));
+        
+        shared_links_high.NOGO.TEX(count_mice) ...
+            = mean(network_shared_links{1,count_mice}.NOGO(high_perf_shared_sessions_indices,TEX));
+        
+        shared_links_low.NOGO.TEX(count_mice) ...
+            = mean(network_shared_links{1,count_mice}.NOGO(low_perf_shared_sessions_indices,TEX));
+    
+        
+        shared_links_variance_high.GO.TEX(count_mice) ...
+            = std(network_shared_links{1,count_mice}.GO(high_perf_shared_sessions_indices,TEX),'omitnan');
+        
+        shared_links_variance_low.GO.TEX(count_mice) ...
+            = std(network_shared_links{1,count_mice}.GO(low_perf_shared_sessions_indices,TEX),'omitnan');
+        
+        shared_links_variance_high.NOGO.TEX(count_mice) ...
+            = std(network_shared_links{1,count_mice}.NOGO(high_perf_shared_sessions_indices,TEX),'omitnan');
+        
+        shared_links_variance_low.NOGO.TEX(count_mice) ...
+            = std(network_shared_links{1,count_mice}.NOGO(low_perf_shared_sessions_indices,TEX),'omitnan');
+  
+    %---------------------------  
+    %--- update unique links ---
+    %---------------------------
+    
+        unique_links_high.GO.TEX(count_mice) ...
+            = mean(network_unique_links{1,count_mice}.GO(high_perf_sessions_indices,TEX));
+        
+        unique_links_low.GO.TEX(count_mice) ...
+            = mean(network_unique_links{1,count_mice}.GO(low_perf_sessions_indices,TEX));
+        
+        unique_links_high.NOGO.TEX(count_mice) ...
+            = mean(network_unique_links{1,count_mice}.NOGO(high_perf_sessions_indices,TEX));
+        
+        unique_links_low.NOGO.TEX(count_mice) ...
+            = mean(network_unique_links{1,count_mice}.NOGO(low_perf_sessions_indices,TEX));
+    
+        unique_links_variance_high.GO.TEX(count_mice) ...
+            = std(network_unique_links{1,count_mice}.GO(high_perf_sessions_indices,TEX),'omitnan');
+        
+        unique_links_variance_low.GO.TEX(count_mice) ...
+            = std(network_unique_links{1,count_mice}.GO(low_perf_sessions_indices,TEX),'omitnan');
+        
+        unique_links_variance_high.NOGO.TEX(count_mice) ...
+            = std(network_unique_links{1,count_mice}.NOGO(high_perf_sessions_indices,TEX),'omitnan');
+        
+        unique_links_variance_low.NOGO.TEX(count_mice) ...
+            = std(network_unique_links{1,count_mice}.NOGO(low_perf_sessions_indices,TEX),'omitnan');
+   
+    
+end
+
+
+    
+%% Total Links
+
+[p,t,stats] =anova1([total_links_low.GO.TEX' total_links_low.NOGO.TEX' total_links_high.GO.TEX' total_links_high.NOGO.TEX'])
+
+[c,m,h,nms] = multcompare(stats)
+
+%% Shared Links
+[p,t,stats] = anova1([shared_links_low.GO.TEX' shared_links_low.NOGO.TEX' shared_links_high.GO.TEX' shared_links_high.NOGO.TEX'])
+
+[c,m,h,nms] = multcompare(stats)
+
+%% Unique Links
+
+[p,t,stats] =anova1([unique_links_low.GO.TEX' unique_links_low.NOGO.TEX' unique_links_high.GO.TEX' unique_links_high.NOGO.TEX'])
+
+[c,m,h,nms] = multcompare(stats)
+
+%% changes shared links are 0.0547 close to significant to predict difference GO/NOGO
+% with the exception of mtp_mtp_11 and mtp_2
+
+p = signrank(total_links_low.NOGO.TEX, total_links_low.GO.TEX)
+
+%%
+p = signrank(shared_links_low.NOGO.TEX, shared_links_low.GO.TEX)
+
+%% changes shared and unique links are significant to predict performance levels
+
+p = signrank(unique_links_high.NOGO.TEX, unique_links_high.GO.TEX)
+
+%% Plot with standard deviation
+
+x = [0 1];
+marker=['o' 's' 'd' '^' 'v' '>' '<' 'x'];
+
+for count_mice = 1:mice
+    
+        subplot(3,1,1)
+        errorbar([0 1],[total_links_low.GO.TEX(count_mice) total_links_high.GO.TEX(count_mice)],...
+            [total_links_variance_low.GO.TEX(count_mice) total_links_variance_high.GO.TEX(count_mice)],'-',...
+        'Marker', marker(count_mice) ,...
+        'Color', [0.8, 0.8, 0.8],...
+        'LineWidth',2,...
+        'MarkerSize',10,...
+        'MarkerEdgeColor',[0.8,0,0],...
+        'MarkerFaceColor',[0.8,0.8,0.8])
+        xlim([-0.5 1.5])
+        axis square
+        hold on
+
+        %plot([0 1],[1/12 1/12], ':r','LineWidth',2)
+        %hold on
+    
+end
+
+for count_mice = 1:mice
+    
+        subplot(3,1,2)
+        errorbar([0 1],[shared_links_low.GO.TEX(count_mice) shared_links_high.GO.TEX(count_mice)],...
+            [shared_links_variance_low.GO.TEX(count_mice) shared_links_variance_high.GO.TEX(count_mice)],'-',...
+        'Marker', marker(count_mice) ,...
+        'Color', [0.8, 0.8, 0.8],...
+        'LineWidth',2,...
+        'MarkerSize',10,...
+        'MarkerEdgeColor',[0,0,0.8],...
+        'MarkerFaceColor',[0.8,0.8,0.8])
+        xlim([-0.5 1.5])
+        axis square
+        hold on
+
+        %plot([0 1],[1/12 1/12], ':r','LineWidth',2)
+        %hold on
+    
+end
+
+for count_mice = 1:mice
+    
+        subplot(3,1,3)
+        errorbar([0 1],[unique_links_low.GO.TEX(count_mice) unique_links_high.GO.TEX(count_mice)],...
+            [unique_links_variance_low.GO.TEX(count_mice) unique_links_variance_high.GO.TEX(count_mice)],'-',...
+        'Marker', marker(count_mice) ,...
+        'Color', [0.8, 0.8, 0.8],...
+        'LineWidth',2,...
+        'MarkerSize',10,...
+        'MarkerEdgeColor',[0,0.8,0.8],...
+        'MarkerFaceColor',[0.8,0.8,0.8])
+        xlim([-0.5 1.5])
+        axis square
+        hold on
+
+        %plot([0 1],[1/12 1/12], ':r','LineWidth',2)
+        %hold on
+    
+end
+
+hold off
+
+%%
+x = [0 1];
+marker=['o' 's' 'd' '^' 'v' '>' '<' 'x'];
+
+for count_mice = 1:mice
+    
+        subplot(3,1,1)
+        plot([0 1],[total_links_low.NOGO.TEX(count_mice) total_links_high.NOGO.TEX(count_mice)],'-',...
+        'Marker', marker(count_mice) ,...
+        'Color', [0.8, 0.8, 0.8],...
+        'LineWidth',2,...
+        'MarkerSize',10,...
+        'MarkerEdgeColor',[0.8,0,0],...
+        'MarkerFaceColor',[0.8,0.8,0.8])
+        xlim([-0.5 1.5])
+        axis square
+        hold on
+        title('Total links')
+        %plot([0 1],[1/12 1/12], ':r','LineWidth',2)
+        %hold on
+    
+end
+
+for count_mice = 1:mice
+    
+        subplot(3,1,2)
+        plot([0 1],[shared_links_low.NOGO.TEX(count_mice) shared_links_high.NOGO.TEX(count_mice)],'-',...
+        'Marker', marker(count_mice) ,...
+        'Color', [0.8, 0.8, 0.8],...
+        'LineWidth',2,...
+        'MarkerSize',10,...
+        'MarkerEdgeColor',[0,0,0.8],...
+        'MarkerFaceColor',[0.8,0.8,0.8])
+        xlim([-0.5 1.5])
+        axis square
+        hold on
+        title('Shared links')
+        %plot([0 1],[1/12 1/12], ':r','LineWidth',2)
+        %hold on
+    
+end
+
+for count_mice = 1:mice
+    
+        subplot(3,1,3)
+        plot([0 1],[unique_links_low.NOGO.TEX(count_mice) unique_links_high.NOGO.TEX(count_mice)],'-',...
+        'Marker', marker(count_mice) ,...
+        'Color', [0.8, 0.8, 0.8],...
+        'LineWidth',2,...
+        'MarkerSize',10,...
+        'MarkerEdgeColor',[0,0.8,0.8],...
+        'MarkerFaceColor',[0.8,0.8,0.8])
+        xlim([-0.5 1.5])
+        axis square
+        hold on
+        title('Unique links')
+        %plot([0 1],[1/12 1/12], ':r','LineWidth',2)
+        %hold on
+    
+end
+
+hold off
