@@ -1,53 +1,80 @@
-import os, sys
+'''
+VERY IMPORTANT:
+DO NOT USE SAME PROCEDURE FOR UPSAMPLING AND DOWNSAMPLING
+
+* When we upsample, we want to interpolate data
+* When we downsample, we want to sample the trendline, not individual fluctuations
+
+[] Maybe impl FFT-based resampling, that joins both
+'''
+
+# import standard libraries
+import sys
+from os.path import dirname, abspath, join
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Export library path
-thispath = os.path.dirname(os.path.abspath(__file__))
-parpath = os.path.abspath(os.path.join(thispath, os.pardir))
-sys.path.append(os.path.join(parpath, 'lib/'))
+thispath   = dirname(abspath(__file__))
+parentpath = dirname(thispath)
+libpath    = join(parentpath, 'lib')
+sys.path.append(libpath)
 
-from signal_lib import downsample #, downsample_interp
+# import special libraries
+from signal_lib import resample
 
 ##########################
-# Generate Markov Data
+# Downsampling
 ##########################
-
-T_RANGE = [0.0, 1.0]
-T = T_RANGE[1] - T_RANGE[0]
-DT1 = 0.01 # Times
-DT2 = 0.05 # Bins
-N1 = int(T / DT1) + 1
-N2 = 1 + int((N1-1) * DT1 / DT2)
-
-print(N1, N2)
 
 # Create data
-t1 = np.linspace(T_RANGE[0], T_RANGE[1], N1)
-y1 = np.random.normal(0, 1, N1)
-for i in range(1, N1):
+T  = 10     # s
+DT = 0.001  # s
+t1 = np.arange(0, T, DT)
+y1 = np.random.normal(0, 1, t1.size)
+for i in range(1, t1.size):
     y1[i] += y1[i-1]
 
-##########################
-# Downsample
-##########################
-    
-# t2, y2 = downsample_interp(t1, y1, DT2)
-t2, y2 = downsample(t1, y1, N2, method="window")
-t3, y3 = downsample(t1, y1, N2, method="kernel",     ker_sig2 = DT2**2)
-t4, y4 = downsample(t1, y1, N2, method="kernel", ker_sig2 = (DT2/2)**2)
-t5, y5 = downsample(t1, y1, N2, method="kernel", ker_sig2 = (DT2/4)**2)
+# Resample
+DT2 = 0.1   # s
+t2 = np.arange(0, t1[-1], DT2)
+y2 = resample(t1, y1, t2, {"method" : "smooth", "kind" : "window"})
+y3 = resample(t1, y1, t2, {"method" : "smooth", "kind" : "kernel", "ker_sig2" : DT2**2})
+y4 = resample(t1, y1, t2, {"method" : "smooth", "kind" : "kernel", "ker_sig2" : (DT2/2)**2})
+y5 = resample(t1, y1, t2, {"method" : "smooth", "kind" : "kernel", "ker_sig2" : (DT2/4)**2})
 
-##########################
 # Plot
-##########################
-
 plt.figure()
 plt.plot(t1, y1, '.-', label='orig')
 plt.plot(t2, y2, '.-', label='window')
-plt.plot(t3, y3, '.-', label="ker, s2=d2^2")
-plt.plot(t4, y4, '.-', label="ker, s2=(d2/2)^2")
-plt.plot(t5, y5, '.-', label="ker, s2=(d2/4)^2")
-
+plt.plot(t2, y3, '.-', label="ker, s2=d2^2")
+plt.plot(t2, y4, '.-', label="ker, s2=(d2/2)^2")
+plt.plot(t2, y5, '.-', label="ker, s2=(d2/4)^2")
 plt.legend()
+
+##########################
+# Upsampling
+##########################
+
+# Create Data
+T  = 10     # s
+DT = 0.1    # s
+t1 = np.arange(0, T, DT)
+y1 = np.sin(10*t1) * np.sin(2*t1)
+
+# Resample
+DT2 = 0.01  # s
+t2 = np.arange(0, t1[-1], DT2)
+y2 = resample(t1, y1, t2, {"method" : "interpolative", "kind" : "linear"})
+y3 = resample(t1, y1, t2, {"method" : "interpolative", "kind" : "quadratic"})
+y4 = resample(t1, y1, t2, {"method" : "interpolative", "kind" : "cubic"})
+
+# Plot
+plt.figure()
+plt.plot(t1, y1, 'o', label='orig')
+plt.plot(t2, y2, '.-', label='linear')
+plt.plot(t2, y3, '.-', label="quadratic")
+plt.plot(t2, y4, '.-', label="cubic")
+plt.legend()
+
 plt.show()

@@ -1,17 +1,18 @@
-# Export library path
-import os, sys
-thispath = os.path.dirname(os.path.abspath(__file__))
-p1path = os.path.abspath(os.path.join(thispath, os.pardir))
-p2path = os.path.abspath(os.path.join(p1path, os.pardir))
-sys.path.append(os.path.join(p1path, 'lib/'))
-
 # import standard libraries
+import sys
+from os.path import dirname, abspath, join
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Export library path
+thispath   = dirname(abspath(__file__))
+parentpath = dirname(thispath)
+libpath    = join(parentpath, 'lib')
+sys.path.append(libpath)
+
 # import special libraries
-from corr_lib import crossCorr
-from plots.plt_imshow_mat import plotImshowMat
+from fc.corr_lib import crossCorr
+from plots.plot_matrix import plotMatrix
 
 '''
    Test 1:
@@ -37,11 +38,11 @@ for i in range(1, N_NODE):
 corrMat, corrDelMat = crossCorr(data, DELAY_MIN, DELAY_MAX, est='corr')
 sprMat, sprDelMat = crossCorr(data, DELAY_MIN, DELAY_MAX, est='spr')
 
-plotImshowMat(
-    [corrMat, corrDelMat, sprMat, sprDelMat],
-    np.array(["Correlation", "Corr. Delays", "Spearmann", "Spr. Delays"]),
+plotMatrix(
     "Test 1: Channels are shifts of the same data",
     (2, 2),
+    [corrMat, corrDelMat, sprMat, sprDelMat],
+    np.array(["Correlation", "Corr. Delays", "Spearmann", "Spr. Delays"]),
     lims = [[-1, 1], [0, DELAY_MAX], [-1, 1], [0, DELAY_MAX]],
     draw = True
 )
@@ -68,11 +69,11 @@ for i in range(1, N_NODE):
 corrMat, corrDelMat = crossCorr(data, DELAY_MIN, DELAY_MAX, est='corr')
 sprMat, sprDelMat = crossCorr(data, DELAY_MIN, DELAY_MAX, est='spr')
 
-plotImshowMat(
-    [corrMat, corrDelMat, sprMat, sprDelMat],
-    np.array(["Correlation", "Corr. Delays", "Spearmann", "Spr. Delays"]),
+plotMatrix(
     "Test 2: Channels are same, but progressively more noisy",
     (2, 2),
+    [corrMat, corrDelMat, sprMat, sprDelMat],
+    np.array(["Correlation", "Corr. Delays", "Spearmann", "Spr. Delays"]),
     lims = [[-1, 1], [0, DELAY_MAX], [-1, 1], [0, DELAY_MAX]],
     draw = True
 )
@@ -86,22 +87,23 @@ plotImshowMat(
 '''
 
 N_NODE = 5
+DELAY_TRUE = 6
 DELAY_MIN = 1
 DELAY_MAX = 6
 N_DATA = DELAY_MAX+1
 N_TRIAL = 200
 
-data = np.random.normal(0, 1, N_TRIAL*N_DATA*N_NODE).reshape((N_TRIAL,N_DATA,N_NODE))
-data[:, -1, 3] = data[:, 0, 0]
+data = np.random.normal(0, 1, N_TRIAL*N_DATA*N_NODE).reshape((N_NODE, N_DATA, N_TRIAL))
+data[0, DELAY_TRUE:, :] = data[3, :-DELAY_TRUE, :]
 
 corrMat, corrDelMat = crossCorr(data, DELAY_MIN, DELAY_MAX, est='corr')
 sprMat, sprDelMat = crossCorr(data, DELAY_MIN, DELAY_MAX, est='spr')
 
-plotImshowMat(
-    [corrMat, corrDelMat, sprMat, sprDelMat],
-    np.array(["Correlation", "Corr. Delays", "Spearmann", "Spr. Delays"]),
+plotMatrix(
     "Test 3: Random trial-based cross-correlation",
     (2, 2),
+    [corrMat, corrDelMat, sprMat, sprDelMat],
+    np.array(["Correlation", "Corr. Delays", "Spearmann", "Spr. Delays"]),
     lims = [[-1, 1], [0, DELAY_MAX], [-1, 1], [0, DELAY_MAX]],
     draw = True
 )

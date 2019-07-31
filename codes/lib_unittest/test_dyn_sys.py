@@ -1,13 +1,14 @@
+# import standard libraries
+import sys
+from os.path import dirname, abspath, join
+
 # Export library path
-import os, sys
-thispath = os.path.dirname(os.path.abspath(__file__))
-p1path = os.path.abspath(os.path.join(thispath, os.pardir))
-p2path = os.path.abspath(os.path.join(p1path, os.pardir))
-sys.path.append(os.path.join(p1path, 'lib/'))
+thispath   = dirname(abspath(__file__))
+parentpath = dirname(thispath)
+libpath    = join(parentpath, 'lib')
+sys.path.append(libpath)
 
-# Locate results path
-rezPath = os.path.join(os.path.join(p2path, 'data/'), 'sim_ds_h5')
-
+# import special libraries
 from models.dyn_sys import DynSys
 
 # Set parameters
@@ -24,7 +25,7 @@ param = {
 DS1 = DynSys(param)
 
 # Save simulation and metadata
-DS1.save(os.path.join(rezPath, "testDynSys.h5"))
+DS1.save("testDynSys.h5")
 
 #Plot results
 DS1.plot()

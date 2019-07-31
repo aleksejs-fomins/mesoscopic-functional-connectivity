@@ -1,7 +1,7 @@
 from matplotlib import colors
 import matplotlib.pyplot as plt
 
-def plotImshowMat(mat_lst, title_lst, title, shape, lims=None, draw=False, savename=None):
+def plotMatrix(title, shape, mat_lst, title_lst, lims=None, draw=False, savename=None):
     
     # Create plot matrix
     nRows, nCols = shape

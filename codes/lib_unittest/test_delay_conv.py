@@ -1,24 +1,23 @@
-import os, sys
+# import standard libraries
+import sys
+from os.path import dirname, abspath, join
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Export library path
-thispath = os.path.dirname(os.path.abspath(__file__))
-p1path = os.path.abspath(os.path.join(thispath, os.pardir))
-p2path = os.path.abspath(os.path.join(p1path, os.pardir))
-sys.path.append(os.path.join(p1path, 'lib/'))
+thispath   = dirname(abspath(__file__))
+parentpath = dirname(thispath)
+libpath    = join(parentpath, 'lib')
+sys.path.append(libpath)
 
-# Locate results path
-rezPath = os.path.join(os.path.join(p2path, 'data/'), 'sim-ds-py')
-
+# import special libraries
 from signal_lib import approxDelayConv
 
-
 # Create signal
-DT = 0.001
-TAU = 0.1
-t = np.arange(0, 1, DT)
-y = (np.sin(10 * t)**2 > 0.9).astype(float)
+DT =  0.001   # s
+TAU = 0.1     # s
+t = np.arange(0, 10, DT)
+y = (np.sin(1 * t)**2 > 0.7).astype(float)
 
 yc = approxDelayConv(y, TAU, DT)
 
