@@ -1,3 +1,4 @@
+import os, time
 import scipy.io as spio
 
 # Print root level values of dict (result of loadmat)
@@ -12,7 +13,7 @@ def inspect_mfile(d):
 def matstruct2dict(matstruct):
     return {s : [getattr(matstruct, s)] for s in dir(matstruct) if s[0]!='_'}
 
-def loadmat(filename):
+def loadmat(filename, waitRetry=None):
     '''
     this function should be called instead of direct spio.loadmat
     as it cures the problem of not properly recovering python dictionaries
@@ -20,6 +21,17 @@ def loadmat(filename):
     which are still mat-objects
     '''
     
+    # Test if file is accessible, and retry indefinitely if required
+    fileAccessible = os.path.isfile(filename)
+    if notfileAccessible:
+        if waitRetry is None:
+            raise ValueError("Matlab file can not be accessed", filename)
+        else:
+            while not fileAccessible:
+                print("... can't reach file, waiting", waitRetry, "seconds")
+                time.sleep(waitRetry)
+                fileAccessible = os.path.isfile(filename)
+
     # Load data
     data = spio.loadmat(filename, struct_as_record=False, squeeze_me=True)
     
@@ -28,27 +40,27 @@ def loadmat(filename):
     
     return _check_keys(data)
 
-def _check_keys(dict):
+def _check_keys(d):
     '''
     checks if entries in dictionary are mat-objects. If yes
     todict is called to change them to nested dictionaries
     '''
-    for key in dict:
-        if isinstance(dict[key], spio.matlab.mio5_params.mat_struct):
-            dict[key] = _todict(dict[key])
-    return dict        
+    for key in d:
+        if isinstance(d[key], spio.matlab.mio5_params.mat_struct):
+            d[key] = _todict(d[key])
+    return d        
 
 def _todict(matobj):
     '''
     A recursive function which constructs from matobjects nested dictionaries
     '''
-    dict = {}
+    d = {}
     for strg in matobj._fieldnames:
         elem = matobj.__dict__[strg]
         if isinstance(elem, spio.matlab.mio5_params.mat_struct):
-            dict[strg] = _todict(elem)
+            d[strg] = _todict(elem)
         else:
-            dict[strg] = elem
+            d[strg] = elem
     return dict
 
 
