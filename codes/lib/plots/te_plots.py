@@ -31,7 +31,75 @@ def plot_te_nconn_bytime(outname, data_lst, label_lst, timestep):
     plt.close()
     
     
-def plot_te_distribution(outname, data_lst, label_lst, timestep):
+def plot_te_nconn_rangebydays(outname, data_lst, label_lst, ranges_step, timestep):
+    plt.figure(figsize=(10, 10))
+
+    
+    for idxFile, (data, label) in enumerate(zip(data_lst, label_lst)):
+        te, lag, p = data
+        te_rng = te[:,:,ranges_step[0]:ranges_step[1]]
+        atLeast1ConnPerSession += [(np.sum(1-np.isnan(te_rng).astype(int), axis=2) > 0).astype(int)]
+        
+    totalConnPerSession = [np.sum(c) for c in atLeast1ConnPerSession]
+    sharedConn = [np.nan] + [np.sum(atLeast1ConnPerSession[idxFile-1] + atLeast1ConnPerSession[idxFile] == 2) for idxFile in range(1, nFiles)]
+
+    #TODO - extrapolate
+    #have_bte = "BivariateTE" in outname
+    #plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance')
+    plt.plot(totalConnPerSession, label='total')
+    plt.plot(sharedConn, '--',    label='shared')
+    
+    plt.xticks(list(range(np.sum(idxs_ths))))
+    plt.xticklabels([label[12:17] for label in label_lst])
+    plt.legend()
+    plt.savefig(outname)
+    plt.close()
+    
+    
+def plot_te_shared_link_scatter(outname, data_lst, label_lst, ranges_step, timestep):
+    # Compute number of connections per range
+    nConnPerRng = []
+    for idxFile, (data, label) in enumerate(zip(data_lst, label_lst)):
+        te, lag, p = data
+        te_rng = te[:,:,ranges_step[0]:ranges_step[1]]
+        nConnPerRng += [np.sum(1-np.isnan(te_rng).astype(int), axis=2)]
+
+    nFiles = len(data_lst)
+    rng_len = ranges_step[1] - ranges_step[0] + 1
+    
+    # Compute and plot number of shared connections
+    sharedConn = []
+    fig, ax = plt.subplots(nrows = nFiles-1, figsize=(10*(nFiles-1), 10))
+    for idxFile in range(1, nFiles):
+        M = np.zeros((rng_len, rng_len))
+        for x, y in zip(nConnPerRng[idxFile-1].flatten(), nConnPerRng[idxFile].flatten()):
+            M[x][y] += 1
+
+        ax[idxFile-1].imshow(M)
+        ax[idxFile-1].set_xlabel(label[idxFile-1][12:17])
+        ax[idxFile-1].set_ylabel(label[idxFile][12:17])
+        
+    plt.savefig(outname)
+    plt.close()
+    
+    #totalConnPerConn[-1][-1].append(np.sum(1-np.isnan(te).astype(int), axis=2).flatten()  / (te.shape[0]**2 - te.shape[0]))
+    # fig2, ax2 = plt.subplots(nrows=2, ncols=2, figsize=(15,15))
+    # for i, trial in enumerate(["GO","NOGO"]):#in enumerate(["ALL"]):
+    #     ax1[i][0].set_ylabel(trial)
+    #     for j, method in enumerate(["BTE","MTE"]):
+
+    #         ax2[i][j].set_xlabel("connection index, sorted")
+    #         ax2[i][j].set_ylabel("Frequency of occurence")
+
+    #         thisConn = np.array(totalConnPerConn[i][j])
+    #         sortedArgs = np.flip(np.argsort(np.sum(thisConn, axis=0)))
+
+    #         for conn in totalConnPerConn[i][j]:
+    #             ax2[i][j].plot(conn[sortedArgs], '.')
+
+
+
+def plot_te_distribution(outname, data_lst, label_lst,timestep):
     plt.figure(figsize=(10, 10))
     
     nFiles = len(data_lst)
