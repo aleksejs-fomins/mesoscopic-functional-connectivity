@@ -1,0 +1,47 @@
+#########################
+Analysis Params
+#########################
+1) Method [BMI, MMI, BTE, MTE]
+2) Estimator [Gaussian / Kraskov]
+3) System [NoisePure, NoiseLPF, DynSys]
+
+#########################
+Analysis Types
+#########################
+1) Datasize - Width, Depth
+2) Window
+3) Lag
+4) Downsample
+
+#########################
+Plots
+#########################
+
+1) NConn (True vs All)
+
+
+
+
+====================================
+How-To
+====================================
+Datasize - Depth/Width
+------------
+1) Sweep over width
+  1.1) Sweep over system
+      a) Generate data
+      b) Sweep over method
+          b.1) Analyse data - Get matrices
+          b.2) Compute stuff
+          b.3) Plot
+      
+------------
+Window
+------------
+1) Sweep over system
+ 1.1) Generate data
+ 1.2) Sweep over window, method
+   a) analyse
+   b) compute
+   c) Plot
+ 

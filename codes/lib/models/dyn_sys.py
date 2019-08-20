@@ -10,8 +10,6 @@ class DynSys:
     def __init__(self, param):
         self.param = param
         N_DATA, N_NODE, ALPHA = param['N_DATA'], param['N_NODE'], param['ALPHA']
-        MAG, T, STD = param['MAG'], param['T'], param['STD']
-        
         #ALPHA_RAND = np.linspace(ALPHA, 1.0, N_NODE)
 
         # Create Interaction matrix
@@ -22,7 +20,10 @@ class DynSys:
         for i in range(N_NODE-1):
             self.M[i + 1, i] = 1 - ALPHA #ALPHA_RAND[i]
 
-        # Create data
+    def compute(self):
+        N_DATA, N_NODE = self.param['N_DATA'], self.param['N_NODE']
+        MAG, T, STD = self.param['MAG'], self.param['T'], self.param['STD']
+        
         self.data = np.zeros((N_NODE, N_DATA))
         for i in range(1, N_DATA):
             self.data[:, i] = self.M.dot(self.data[:, i-1])        # Propagate signal

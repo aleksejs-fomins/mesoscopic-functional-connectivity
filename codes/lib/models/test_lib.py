@@ -3,11 +3,12 @@ import os, sys
 import numpy as np
 
 # Add path to parent folder
-pwd_lib = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+p1dir = os.path.dirname(os.path.realpath(__file__))
+pwd_lib = os.path.dirname(p1dir)
 sys.path.append(pwd_lib)
 
 # Load user libraries
-from signal_lib import approxDelayConv, downsample
+from signal_lib import approxDelayConv, resample
 
 
 # Generate pure noise data
@@ -20,12 +21,13 @@ def noisePure(p):
 # Generate LPF of noise data, possibly downsampled
 def noiseLPF(p):
     T_SHIFT  = p['TAU_CONV'] * 10    # seconds, Initial shift to avoid accumulation effects
-    NT_SHIFT = int(T_SHIFT / p['DT'])
-    NT       = int(p['T_TOT'] / p['DT'])
+    NT_SHIFT = int(T_SHIFT / p['DT_MICRO']) + 1
+    NT_MICRO = int(p['T_TOT'] / p['DT_MICRO']) + 1
     
-    if 'DT_MACRO' in p.keys():
-        NT_MACRO = int(p['T_TOT'] / p['DT_MACRO'])
-        t_arr = np.linspace(0, p['T_TOT'], NT)
+    if 'DT' in p.keys():
+        NT = int(p['T_TOT'] / p['DT']) + 1
+        t_arr_micro = np.linspace(0, p['T_TOT'], NT_MICRO)
+        t_arr       = np.linspace(0, p['T_TOT'], NT)
         
     src_data = [[] for i in range(p['N_NODE'])]
 
@@ -34,12 +36,13 @@ def noiseLPF(p):
     # 2) Compute convolution with Ca indicator
     # 3) Downsample to experimental time-resolution, if requested
     for iChannel in range(p['N_NODE']):
-        data_rand = np.random.uniform(0, p['STD'], NT + NT_SHIFT)
-        data_conv = approxDelayConv(data_rand, p['TAU_CONV'], p['DT'])
+        data_rand = np.random.uniform(0, p['STD'], NT_MICRO + NT_SHIFT)
+        data_conv = approxDelayConv(data_rand, p['TAU_CONV'], p['DT_MICRO'])
         src_data[iChannel] = data_conv[NT_SHIFT:]
         
-        if 'DT_MACRO' in p.keys():
-            src_data[iChannel] = downsample(t_arr, src_data[iChannel], NT_MACRO)[1]
+        if 'DT' in p.keys():
+            param_downsample = {'method' : 'averaging', 'kind' : 'kernel'}
+            src_data[iChannel] = resample(t_arr_micro, src_data[iChannel], t_arr, param_downsample)
         
     return np.array(src_data)
 
