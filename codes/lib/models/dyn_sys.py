@@ -29,6 +29,8 @@ class DynSys:
             self.data[:, i] = self.M.dot(self.data[:, i-1])        # Propagate signal
             self.data[0, i] += MAG * np.sin(2 * np.pi * i / T)     # Input to the first node
             self.data[:, i] += np.random.normal(0, STD, N_NODE)    # Noise to all nodes
+
+        return self.data
             
     def plot(self, draw=False):
         print("DynSys: plotting results")
