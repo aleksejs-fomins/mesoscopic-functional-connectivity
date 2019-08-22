@@ -194,6 +194,33 @@ def plot_te_distribution(outname, data_lst, label_lst, P_THR, timestep):
     plt.close()
     
 
+def plot_te_distribution_rangebydays(outname, data_lst, label_lst, ranges_sec, P_THR, timestep):
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    nFiles = len(data_lst)
+    for rng_name, rng_sec in ranges_sec.items():
+        rng_min = int(rng_sec[0] / timestep)
+        rng_max = int(rng_sec[1] / timestep)
+    
+        meanTEByDay = []
+        for idxFile, (data, label) in enumerate(zip(data_lst, label_lst)):
+            te, lag, p = data
+            p_rng = p[:,:,rng_min:rng_max]
+            te_rng = te[:,:,rng_min:rng_max]
+            idx_conn = is_conn(p_rng, P_THR)
+            meanTEByDay += [np.mean(te_rng[idx_conn.astype(bool)])]
+
+        #TODO - extrapolate
+        ax.plot(meanTEByDay, label=rng_name)
+    
+    ax.set_xticks(list(range(nFiles)))
+    ax.set_xticklabels([label[12:17] for label in label_lst])
+    ax.legend()
+    plt.savefig(outname)
+    plt.close()
+    
+    
+
 '''
 Task: Compute difference between connectivity predictions made by different estimators
 1) Compute true    over entire trace REL(A,B),      REL(A,B) = |A - B| / |A + B|
