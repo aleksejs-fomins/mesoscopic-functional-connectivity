@@ -23,7 +23,7 @@ def loadmat(filename, waitRetry=None):
     
     # Test if file is accessible, and retry indefinitely if required
     fileAccessible = os.path.isfile(filename)
-    if notfileAccessible:
+    if not fileAccessible:
         if waitRetry is None:
             raise ValueError("Matlab file can not be accessed", filename)
         else:

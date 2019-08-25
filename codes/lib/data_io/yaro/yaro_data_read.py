@@ -8,8 +8,9 @@ thispath = os.path.dirname(os.path.abspath(__file__))
 libpath = os.path.dirname(thispath)
 sys.path.append(libpath)
 
-from matlab.matlab_lib import loadmat, matstruct2dict
-from matlab.aux_functions import merge_dicts, get_subfolders
+from data_io.os_lib import get_subfolders
+from data_io.matlab_lib import loadmat, matstruct2dict
+from aux_functions import merge_dicts
 
 # Read data and behaviour matlab files given containing folder
 def read_neuro_perf(folderpath, verbose=True):
