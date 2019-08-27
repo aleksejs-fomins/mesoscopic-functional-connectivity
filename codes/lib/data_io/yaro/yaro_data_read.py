@@ -17,11 +17,14 @@ def read_neuro_perf(folderpath, verbose=True):
     # Read MAT file from command line
     if verbose:
         print("Reading Yaro data from", folderpath)
-    datafilename = os.path.join(folderpath, "data.mat")
-    behaviorfilename = os.path.join(folderpath, "behaviorvar.mat")
+    fname_data        = os.path.join(folderpath, "data.mat")
+    fname_behaviour   = os.path.join(folderpath, "behaviorvar.mat")
+    fpath_performance = os.path.join(folderpath, "Transfer Entropy")
+    fname_performance = os.path.join(fpath_performance, "performance.mat")
 
-    data = loadmat(datafilename)['data']
-    behavior = loadmat(behaviorfilename)
+    data = loadmat(fname_data)['data']
+    behavior = loadmat(fname_behaviour)
+    performance = loadmat(fname_performance)['performance']
     
     # Get rid of useless fields in behaviour
     behavior = {k : v for k, v in behavior.items() if k[0] != '_'}
@@ -47,7 +50,8 @@ def read_neuro_perf(folderpath, verbose=True):
         # raise ValueError("Behaviour max index must be less than number of trials", behMaxIdx, dataNTrials)
         print("Behaviour max index must be less than number of trials", behMaxIdx, dataNTrials)
     
-    return data, behavior
+    return data, behavior, performance
+
 
 # Read multiple neuro and performance files from a root folder
 def read_neuro_perf_multi(rootpath):
@@ -72,6 +76,7 @@ def read_neuro_perf_multi(rootpath):
             }
             
     return micedict
+
 
 def read_lick(folderpath, verbose=True):
     if verbose:
@@ -145,6 +150,7 @@ def read_paw(folderpath, verbose=True):
     rezdict['tPaw'] = np.arange(0, nTimesPaw) / freqPaw
     rezdict['freqPaw'] = freqPaw
     return rezdict
+
 
 def read_whisk(folderpath, verbose=True):
     if verbose:
