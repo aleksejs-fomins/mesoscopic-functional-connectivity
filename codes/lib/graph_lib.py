@@ -62,20 +62,28 @@ def cl_coeff(M, normDegree=True):
     
     Mnorm = M / maxM
   
+    MnormSqrt3 = (Mnorm)**(1/3) 
+    S2D = MnormSqrt3 + MnormSqrt3.T
+
     for i in range(nNode):
         for j in range(i+1, nNode):
             for k in range(j+1, nNode):
-                triangle_value = avg_geom([Mnorm[i,j], Mnorm[i,k], Mnorm[j,k]])
-                triangle_value += avg_geom([Mnorm[i,j], Mnorm[i,k], Mnorm[k,j]])
-                triangle_value += avg_geom([Mnorm[i,j], Mnorm[k,i], Mnorm[j,k]])
-                triangle_value += avg_geom([Mnorm[i,j], Mnorm[k,i], Mnorm[k,j]])
-                triangle_value += avg_geom([Mnorm[j,i], Mnorm[i,k], Mnorm[j,k]])
-                triangle_value += avg_geom([Mnorm[j,i], Mnorm[i,k], Mnorm[k,j]])
-                triangle_value += avg_geom([Mnorm[j,i], Mnorm[k,i], Mnorm[j,k]])
-                triangle_value += avg_geom([Mnorm[j,i], Mnorm[k,i], Mnorm[k,j]])
-                Cv[i] += triangle_value
-                Cv[j] += triangle_value
-                Cv[k] += triangle_value
+                # Cv[i] += 3*S2D[i,j]*S2D[i,k]*S2D[j,k]
+                Cv[i] += S2D[i,j]*S2D[i,k]*S2D[j,k]
+                Cv[j] += S2D[j,i]*S2D[j,k]*S2D[i,k]
+                Cv[k] += S2D[k,i]*S2D[k,j]*S2D[i,j]
+                
+                # triangle_value = avg_geom([Mnorm[i,j], Mnorm[i,k], Mnorm[j,k]])
+                # triangle_value += avg_geom([Mnorm[i,j], Mnorm[i,k], Mnorm[k,j]])
+                # triangle_value += avg_geom([Mnorm[i,j], Mnorm[k,i], Mnorm[j,k]])
+                # triangle_value += avg_geom([Mnorm[i,j], Mnorm[k,i], Mnorm[k,j]])
+                # triangle_value += avg_geom([Mnorm[j,i], Mnorm[i,k], Mnorm[j,k]])
+                # triangle_value += avg_geom([Mnorm[j,i], Mnorm[i,k], Mnorm[k,j]])
+                # triangle_value += avg_geom([Mnorm[j,i], Mnorm[k,i], Mnorm[j,k]])
+                # triangle_value += avg_geom([Mnorm[j,i], Mnorm[k,i], Mnorm[k,j]])
+                # Cv[i] += triangle_value
+                # Cv[j] += triangle_value
+                # Cv[k] += triangle_value
     
     for i in range(nNode):
         if deg_ind[i] >= 2:
