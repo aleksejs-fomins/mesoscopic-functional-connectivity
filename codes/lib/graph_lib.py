@@ -49,56 +49,36 @@ def avg_geom(v):
 
 # https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.cluster.clustering.html
 def cl_coeff(M, normDegree=True):
-    deg_tot = degree_tot(M)
-    deg_rec = degree_rec(M)
-    deg_ind = deg_tot - deg_rec # number of nodes connected to this node in some way
-        
     nNode = M.shape[0]
-    Cv = np.zeros(nNode)
+    
+    # Check if matrix is nonzero, find maximum, normalize
     maxM = np.max(M)
-    
     if maxM == 0:
-        return Cv
-    
+        return np.zeros(nNode)
     Mnorm = M / maxM
-  
-    MnormSqrt3 = (Mnorm)**(1/3) 
+    
+    # Compute dynamic intermediate step
+    MnormSqrt3 = (offdiag(Mnorm))**(1/3) 
     S2D = MnormSqrt3 + MnormSqrt3.T
 
-    for i in range(nNode):
-        for j in range(i+1, nNode):
-            for k in range(j+1, nNode):
-                # Cv[i] += 3*S2D[i,j]*S2D[i,k]*S2D[j,k]
-                Cv[i] += S2D[i,j]*S2D[i,k]*S2D[j,k]
-                Cv[j] += S2D[j,i]*S2D[j,k]*S2D[i,k]
-                Cv[k] += S2D[k,i]*S2D[k,j]*S2D[i,j]
-                
-                # triangle_value = avg_geom([Mnorm[i,j], Mnorm[i,k], Mnorm[j,k]])
-                # triangle_value += avg_geom([Mnorm[i,j], Mnorm[i,k], Mnorm[k,j]])
-                # triangle_value += avg_geom([Mnorm[i,j], Mnorm[k,i], Mnorm[j,k]])
-                # triangle_value += avg_geom([Mnorm[i,j], Mnorm[k,i], Mnorm[k,j]])
-                # triangle_value += avg_geom([Mnorm[j,i], Mnorm[i,k], Mnorm[j,k]])
-                # triangle_value += avg_geom([Mnorm[j,i], Mnorm[i,k], Mnorm[k,j]])
-                # triangle_value += avg_geom([Mnorm[j,i], Mnorm[k,i], Mnorm[j,k]])
-                # triangle_value += avg_geom([Mnorm[j,i], Mnorm[k,i], Mnorm[k,j]])
-                # Cv[i] += triangle_value
-                # Cv[j] += triangle_value
-                # Cv[k] += triangle_value
+    #Cv = 0.5 * np.sum(S2D.dot(S2D) * S2D, axis=0)
+    Cv = 0.5 * np.einsum('uv,ui,vj', S2D, S2D, S2D).diagonal()
     
-    for i in range(nNode):
-        if deg_ind[i] >= 2:
-            if normDegree:
-                # Compute maximal number of triangles that can be formed
-                # with this number of outgoing edges (including factor of
-                # 2 for the flipped 3rd edge). Then correct it by
-                # subtracting triangles made by reciprocal edges, as
-                # those are not really triangles
-                nMaxTriPerNode = deg_tot[i] * (deg_tot[i] - 1)
-                nMaxTriRecPerNode = 2 * deg_rec[i]
-                Cv[i] /= nMaxTriPerNode - nMaxTriRecPerNode
-            else:
-                nMaxTriPerNode = (nNode - 1) * (nNode - 2) / 2
-                Cv[i] /= 8 * nMaxTriPerNode
+    if normDegree:
+        # Compute maximal number of triangles that can be formed
+        # with this number of outgoing edges (including factor of
+        # 2 for the flipped 3rd edge). Then correct it by
+        # subtracting triangles made by reciprocal edges, as
+        # those are not really triangles
+        deg_tot = degree_tot(Mnorm)
+        deg_rec = degree_rec(Mnorm)
+        nMaxTriPerNode = deg_tot * (deg_tot - 1) - 2 * deg_rec
+        Cv[Cv > 0] /= nMaxTriPerNode[Cv > 0]  # Avoid dividing by zero
+    else:
+        # Normalize everything by the same factor - result if
+        # all connections were non-zero and had the same magnitude
+        nMaxTriPerNode = (nNode - 1) * (nNode - 2) / 2
+        Cv /= 8 * nMaxTriPerNode
     
     return Cv
         
