@@ -55,7 +55,7 @@ def avg_geom(v):
     return np.prod(v) ** (1 / len(v))
 
 # https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.cluster.clustering.html
-def cl_coeff(M, normDegree=True):
+def cl_coeff(M, kind='tot', normDegree=True):
     nNode = M.shape[0]
     
     # Check if matrix is nonzero, find maximum, normalize
@@ -64,11 +64,19 @@ def cl_coeff(M, normDegree=True):
         return np.zeros(nNode)
     
     # Compute dynamic intermediate step
-    MnormSqrt3 = Mnorm**(1/3) 
-    S2D = MnormSqrt3 + MnormSqrt3.T
-
-    #Cv = 0.5 * np.sum(S2D.dot(S2D) * S2D, axis=0)
-    Cv = 0.5 * np.einsum('uv,ui,vj', S2D, S2D, S2D).diagonal()
+    S2D    = Mnorm**(1/3)  # One-directional edge weight
+    S2Dtot = S2D + S2D.T   # Two-directional edge weight
+    
+    # Compute clustering coefficient
+    if kind == 'tot':
+        #Cv = 0.5 * np.sum(S2D.dot(S2D) * S2D, axis=0)
+        Cv = 0.5 * np.einsum('uv,ui,vj', S2Dtot, S2Dtot, S2Dtot).diagonal()
+    elif kind == 'in' :
+        Cv = 0.5 * np.einsum('uv,ui,vj', S2Dtot, S2D, S2D).diagonal()
+    elif kind == 'out' :
+        Cv = 0.5 * np.einsum('uv,iu,jv', S2Dtot, S2D, S2D).diagonal()
+    else:
+        raise ValueError("Unexpected Clustering Coefficient kind", kind)
     
     if normDegree:
         # Compute maximal number of triangles that can be formed
@@ -80,15 +88,27 @@ def cl_coeff(M, normDegree=True):
 #         deg_rec = degree_rec(Mnorm)
 #         nMaxTriPerNode = deg_tot * (deg_tot - 1) - 2 * deg_rec
         #Cv[Cv > 0] /= nMaxTriPerNode[Cv > 0]  # Avoid dividing by zero
-        totDegSq32 = np.sum(S2D, axis=0)**2
-        recDegSq32 = np.sum(S2D**2, axis=0)
-        norm = totDegSq32 - recDegSq32
+    
+        if kind == 'tot':
+            totDegSq32 = np.sum(S2Dtot, axis=0)**2   # Total degree including degenerate triangles
+            recDegSq32 = np.sum(S2Dtot**2, axis=0)   # Degree of denenerate triangles only
+            norm = totDegSq32 - recDegSq32           # Total degree of only true triangles
+        elif kind == 'in':
+            inDegSq32 = np.sum(S2D, axis=0)**2       # Indegree including degenerate triangles
+            recDegSq32 = np.sum(S2D**2, axis=0)      # Degree of denenerate triangles only
+            norm = inDegSq32 - recDegSq32            # Indegree degree of only true triangles
+        elif kind == 'out':
+            outDegSq32 = np.sum(S2D, axis=1)**2      # Outdegree including degenerate triangles
+            recDegSq32 = np.sum(S2D**2, axis=1)      # Degree of denenerate triangles only
+            norm = outDegSq32 - recDegSq32           # Outdegree degree of only true triangles
+            
         Cv[Cv > 0] /= norm[Cv > 0]  # Avoid dividing by zero
     else:
         # Normalize everything by the same factor - result if
         # all connections were non-zero and had the same magnitude
+        nComb = 8 if kind == 'tot' else 2
         nMaxTriPerNode = (nNode - 1) * (nNode - 2) / 2
-        Cv /= 8 * nMaxTriPerNode
+        Cv /= nComb * nMaxTriPerNode
     
     return Cv
         
