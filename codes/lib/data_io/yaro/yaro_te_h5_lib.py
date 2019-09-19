@@ -78,7 +78,7 @@ def getStatistics(dataname, basenames):
     
     parse_dataname = dataname.split('_')
 
-    assert parse_dataname[0] in ["raw", "subsample"], "Can't infer downsampling from " + dataname
+    assert parse_dataname[0] in ["raw", "subsample", "subsampled"], "Can't infer downsampling from " + dataname
     assert parse_dataname[1] == "delay", "Unexpected data folder name " + dataname
     assert parse_dataname[3] == "window", "Unexpected data folder name " + dataname
     

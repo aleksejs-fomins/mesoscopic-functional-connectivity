@@ -8,17 +8,18 @@ thispath = os.path.dirname(os.path.abspath(__file__))
 libpath = os.path.dirname(thispath)
 sys.path.append(libpath)
 
+import graph_lib
 from signal_lib import resample
 
 # Determine where a link is present
-def is_conn(p, p_thr):
-    p_tmp = np.copy(p)
-    p_tmp[np.isnan(p)] = 100  # Set p-value of NAN connections to infinity to exclude them
-    return p_tmp < p_thr      # Only include connections that are likely (low p-value)
+def is_conn(p, pTHR):
+    pTMP = np.copy(p)
+    pTMP[np.isnan(p)] = 100  # Set p-value of NAN connections to infinity to exclude them
+    return pTMP < pTHR      # Only include connections that are likely (low p-value)
 
 # Indices of all off-diagonal elements
 def is_not_diag(N):
-    return (1 - np.diag(np.ones(N))).astype(bool)
+    return ~np.eye(N)# (1 - np.diag(np.ones(N))).astype(bool)
 
 # Compute indices of slice of sorted data which fit into the provided range
 def slice_sorted(data, rng):
@@ -27,42 +28,116 @@ def slice_sorted(data, rng):
         bisect.bisect_right(data, rng[1])]
 
 
-def plot_te_nconn_bytime(outname, times_lst, data_lst, label_lst, p_thr, timestep):
-    plt.figure(figsize=(10, 10))
+# Number of connections as a function of time
+def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, timestep):
+    binaryMetrics = {    # 1 number per matrix
+        "totalConn"               : np.sum,
+        'std of in degree'        : lambda M: np.std(graph_lib.degree_in(M)),
+#         'out degree'              : graph_lib.degree_out,
+#         'total degree'            : graph_lib.degree_tot,
+#         'reciprocal degree'       : graph_lib.degree_rec,
+        'cc-total-normalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'        : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=False)),
+        'cc-out-normalized'       : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
+    }
     
-    nFiles = len(data_lst)
-    for idxFile, (times, data, label) in enumerate(zip(times_lst, data_lst, label_lst)):
+    nMetrics = len(binaryMetrics)
+    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
+    
+    nFiles = len(dataLst)
+    for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
         te, lag, p = data
+        binaryConnMat = is_conn(p, pTHR)
         
-        totalConnPerTime = np.sum(is_conn(p, p_thr), axis=(0,1))
-        
-        plt.plot(times, totalConnPerTime, label=label[12:17], color=((idxFile / nFiles), 0, 0))
+        for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
+            metricByTime = [metricFunc(binaryConnMat[:,:,iTime]) for iTime in len(times)]
+            ax[iMetric].plot(times, metricByTime, label=label[12:17], color=((idxFile / nFiles), 0, 0))
 
-        
+    # Special properties for number of connections
     N_CH = te.shape[0]
     have_bte = "BivariateTE" in outname
     plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance', linewidth=2.0)
     plt.xlim(0, 10)
     plt.ylim(0, N_CH*(N_CH-1))
-    plt.xlabel("time, seconds")
-    plt.ylabel("Number of connections")
-    plt.legend()
+    
+    for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
+        ax[iMetric].xlabel("time, seconds")
+        ax[iMetric].ylabel(metricName)
+        ax[iMetric].legend()
     plt.savefig(outname)
     plt.close()
     
     
-def plot_te_nconn_rangebydays(outname, times_lst, data_lst, label_lst, ranges_sec, p_thr, timestep):
+# Number of connections as a function of time
+def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, timestep):        
+    floatMetrics = {    # 1 number per matrix
+        "maximal TE"              : np.max,
+        "mean TE"                 : lambda M : np.mean(M[M > 0]),
+        "total TE"                : np.sum,
+        'std of in degree'        : lambda M: np.std(graph_lib.degree_in(M)),
+#         'out degree'              : graph_lib.degree_out,
+#         'total degree'            : graph_lib.degree_tot,
+#         'reciprocal degree'       : graph_lib.degree_rec,
+        'cc-total-normalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'        : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=False)),
+        'cc-out-normalized'       : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
+    }
+    
+    
+    nMetrics = len(metrics)
+    nFiles = len(dataLst)
+    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
+    for iMetric, (metricName, metricFunc) in enumerate(metrics.items()):
+        for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+            te, lag, p = data
+            teZeroNAN = np.copy(te)
+            teZeroNAN[~is_conn(p, pTHR)] = 0   # Set TE of all non-existing connections to zero
+
+            teMetric = [metricFunc(teZeroNAN[:,:,iTime]) for iTime in range(len(times))]
+            ax[iMetric].plot(times, teMetric, label=label[12:17], color=((idxFile / nFiles), 0, 0))
+
+        ax[iMetric].xlabel("time, seconds")
+        ax[iMetric].ylabel(metricName + " transfer entropy")
+        ax[iMetric].legend()
+    plt.savefig(outname)
+    plt.close()
+
+    
+# Strategy 1: Conn=True if have at least 1 conn within range
+# Strategy 2: Compute 1 metric per time step, average over range
+def plot_te_binary_metrics_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
+    binaryMetrics = {    # 1 number per time series of matrices
+        "totalConn"               : np.sum,
+        'std of in degree'        : lambda M: np.std(graph_lib.degree_in(M)),
+#         'out degree'              : graph_lib.degree_out,
+#         'total degree'            : graph_lib.degree_tot,
+#         'reciprocal degree'       : graph_lib.degree_rec,
+        'cc-total-normalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'        : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=False)),
+        'cc-out-normalized'       : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
+    }
+    
+    
     fig, ax = plt.subplots(figsize=(10, 10))
 
-    nFiles = len(data_lst)
-    for rng_name, rng_sec in ranges_sec.items():    
+    nFiles = len(dataLst)
+    for rangeName, rangeSeconds in rangesSec.items():    
         atLeast1ConnPerSession = []
-        for idxFile, (times, data, label) in enumerate(zip(times_lst, data_lst, label_lst)):
-            rng = slice_sorted(times, rng_sec[0])
+        for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+            rng = slice_sorted(times, rangeSeconds[0])
             
             te, lag, p = data
-            p_rng = p[:,:,rng[0]:rng[1]]
-            atLeast1ConnPerSession += [(np.sum(is_conn(p_rng, p_thr), axis=2) > 0).astype(int)]
+            pRng = p[:,:,rng[0]:rng[1]]
+            atLeast1ConnPerSession += [(np.sum(is_conn(pRng, pTHR), axis=2) > 0).astype(int)]
 
         nConnPerSession = [np.sum(c) for c in atLeast1ConnPerSession]
         sharedConn      = [np.nan] + [np.sum(atLeast1ConnPerSession[idxFile-1] + atLeast1ConnPerSession[idxFile] == 2) for idxFile in range(1, nFiles)]
@@ -70,31 +145,93 @@ def plot_te_nconn_rangebydays(outname, times_lst, data_lst, label_lst, ranges_se
         #TODO - extrapolate
         #have_bte = "BivariateTE" in outname
         #plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance')
-        ax.plot(nConnPerSession, label=rng_name+'_total')
-        ax.plot(sharedConn, '--', label=rng_name+'_shared')
+        ax.plot(nConnPerSession, label=rangeName+'_total')
+        ax.plot(sharedConn, '--', label=rangeName+'_shared')
     
     N_CH = te.shape[0]
     ax.set_ylim(0, N_CH*(N_CH-1))
     ax.set_xticks(list(range(nFiles)))
-    ax.set_xticklabels([label[12:17] for label in label_lst])
+    ax.set_xticklabels([label[12:17] for label in labelLst])
+    ax.legend()
+    plt.savefig(outname)
+    plt.close()
+  
+    
+def plot_te_mean_tot_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
+    metrics = {
+        "mean" : np.mean,
+        "tot" : np.sum}
+    
+    nMetrics = len(metrics)
+    nFiles = len(dataLst)
+    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
+    
+    for iMetric, (metricName, metricFunc) in enumerate(metrics.items()):
+        for rangeName, rangeSeconds in rangesSec.items():
+            teMetricArr = np.zeros(nFiles)
+            for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+                rng = slice_sorted(times, rangeSeconds[0])
+                te, lag, p = data
+                pRng = p[:,:,rng[0]:rng[1]]
+
+                teFlatRange = te[is_conn(pRng, pTHR)]
+
+                teMetricArr[idxFile] = metricFunc(teFlatRange)
+
+            ax[iMetric].plot(teMetricArr, label=rangeName)
+        
+        ax[iMetric].set_title(metricName + " transfer entropy")
+        ax[iMetric].set_xticks(list(range(nFiles)))
+        ax[iMetric].set_xticklabels([label[12:17] for label in labelLst])
+        ax[iMetric].legend()
+    plt.savefig(outname)
+    plt.close()
+    
+    
+def plot_te_nconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    nFiles = len(dataLst)
+    for rangeName, rangeSeconds in rangesSec.items():    
+        atLeast1ConnPerSession = []
+        for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+            rng = slice_sorted(times, rangeSeconds[0])
+            
+            te, lag, p = data
+            pRng = p[:,:,rng[0]:rng[1]]
+            atLeast1ConnPerSession += [(np.sum(is_conn(pRng, pTHR), axis=2) > 0).astype(int)]
+
+        nConnPerSession = [np.sum(c) for c in atLeast1ConnPerSession]
+        sharedConn      = [np.nan] + [np.sum(atLeast1ConnPerSession[idxFile-1] + atLeast1ConnPerSession[idxFile] == 2) for idxFile in range(1, nFiles)]
+
+        #TODO - extrapolate
+        #have_bte = "BivariateTE" in outname
+        #plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance')
+        ax.plot(nConnPerSession, label=rangeName+'_total')
+        ax.plot(sharedConn, '--', label=rangeName+'_shared')
+    
+    N_CH = te.shape[0]
+    ax.set_ylim(0, N_CH*(N_CH-1))
+    ax.set_xticks(list(range(nFiles)))
+    ax.set_xticklabels([label[12:17] for label in labelLst])
     ax.legend()
     plt.savefig(outname)
     plt.close()
     
     
-def plot_te_avgnconn_rangebydays(outname, times_lst, data_lst, label_lst, ranges_sec, p_thr, timestep):
+def plot_te_avgnconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
     fig, ax = plt.subplots(ncols=3, figsize=(30, 10))
 
-    nFiles = len(data_lst)
-    for rng_name, rng_sec in ranges_sec.items():
+    nFiles = len(dataLst)
+    for rangeName, rangeSeconds in rangesSec.items():
         freqConnRange = []
-        for idxFile, (times, data, label) in enumerate(zip(times_lst, data_lst, label_lst)):
-            rng = slice_sorted(times, rng_sec[0])
+        for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+            rng = slice_sorted(times, rangeSeconds[0])
             te, lag, p = data
-            p_rng = p[:,:,rng[0]:rng[1]]
+            pRng = p[:,:,rng[0]:rng[1]]
             
-            conn_1D_offdiag = is_conn(p_rng, p_thr)[is_not_diag(p.shape[0])]
-            freqConnRange += [np.mean(conn_1D_offdiag, axis=1)]
+            conn1DOffDiag = is_conn(pRng, pTHR)[is_not_diag(p.shape[0])]
+            freqConnRange += [np.mean(conn1DOffDiag, axis=1)]
 
         freqConnPerSession = [np.mean(freq) for freq in freqConnRange]
         freqSharedConn = [np.nan]
@@ -110,9 +247,9 @@ def plot_te_avgnconn_rangebydays(outname, times_lst, data_lst, label_lst, ranges
         #TODO - extrapolate
         #have_bte = "BivariateTE" in outname
         #plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance')
-        ax[0].plot(freqConnPerSession,  label=rng_name)
-        ax[1].plot(freqSharedConn, '--', label=rng_name)
-        ax[2].plot(relFreqSharedConn, '--', label=rng_name)
+        ax[0].plot(freqConnPerSession,  label=rangeName)
+        ax[1].plot(freqSharedConn, '--', label=rangeName)
+        ax[2].plot(relFreqSharedConn, '--', label=rangeName)
         
     ax[0].set_title("Average connection frequency")
     ax[1].set_title("Average connection frequency L1 distance")
@@ -123,9 +260,9 @@ def plot_te_avgnconn_rangebydays(outname, times_lst, data_lst, label_lst, ranges
     ax[0].set_xticks(list(range(nFiles)))
     ax[1].set_xticks(list(range(nFiles)))
     ax[2].set_xticks(list(range(nFiles)))
-    ax[0].set_xticklabels([label[12:17] for label in label_lst])
-    ax[1].set_xticklabels([label[12:17] for label in label_lst])
-    ax[2].set_xticklabels([label[12:17] for label in label_lst])
+    ax[0].set_xticklabels([label[12:17] for label in labelLst])
+    ax[1].set_xticklabels([label[12:17] for label in labelLst])
+    ax[2].set_xticklabels([label[12:17] for label in labelLst])
     ax[0].legend()
     ax[1].legend()
     ax[2].legend()
@@ -133,26 +270,26 @@ def plot_te_avgnconn_rangebydays(outname, times_lst, data_lst, label_lst, ranges
     plt.close()
     
     
-def plot_te_shared_link_scatter(outname, times_lst, data_lst, label_lst, ranges_sec, p_thr, timestep):
-    nFiles = len(data_lst)
+def plot_te_shared_link_scatter(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
+    nFiles = len(dataLst)
     N_ROWS = nFiles-1
-    N_COLS = len(ranges_sec)
+    N_COLS = len(rangesSec)
     SHARED_MAX_EFF = 0
     fig, ax = plt.subplots(nrows=N_ROWS, ncols=N_COLS, figsize=(5*N_COLS, 5*N_ROWS), tight_layout=True)
     
-    for iRNG, (rng_name, rng_sec) in enumerate(ranges_sec.items()):
+    for iRNG, (rangeName, rangeSeconds) in enumerate(rangesSec.items()):
         # Name plot
-        ax[0][iRNG].set_title(rng_name)
+        ax[0][iRNG].set_title(rangeName)
         
         rng_len = 0
         nConnPerRng = []
-        for idxFile, (times, data, label) in enumerate(zip(times_lst, data_lst, label_lst)):
-            rng = slice_sorted(times, rng_sec[0])
+        for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+            rng = slice_sorted(times, rangeSeconds[0])
             rng_len = np.max([rng_len, rng[1] - rng[0]])
             
             te, lag, p = data
-            p_rng = p[:,:,rng[0]:rng[1]]
-            nConnPerRng += [np.sum(is_conn(p_rng, p_thr), axis=2)]
+            pRng = p[:,:,rng[0]:rng[1]]
+            nConnPerRng += [np.sum(is_conn(pRng, pTHR), axis=2)]
 
         # Compute and plot number of shared connections
         sharedConn = []
@@ -175,13 +312,13 @@ def plot_te_shared_link_scatter(outname, times_lst, data_lst, label_lst, ranges_
     plt.close()
 
 
-def plot_te_distribution(outname, data_lst, label_lst, P_THR, timestep):
+def plot_te_distribution(outname, dataLst, labelLst, pTHR, timestep):
     plt.figure(figsize=(10, 10))
     
-    nFiles = len(data_lst)
-    for idxFile, (data, label) in enumerate(zip(data_lst, label_lst)):
+    nFiles = len(dataLst)
+    for idxFile, (data, label) in enumerate(zip(dataLst, labelLst)):
         te, lag, p = data
-        teflat = te[is_conn(p, P_THR)]
+        teflat = te[is_conn(p, pTHR)]
         
         plt.hist(teflat, bins='auto', label=label[12:17], color=((idxFile / nFiles), 0, 0), alpha=0.3)
 
@@ -194,27 +331,27 @@ def plot_te_distribution(outname, data_lst, label_lst, P_THR, timestep):
     plt.close()
     
 
-def plot_te_distribution_rangebydays(outname, data_lst, label_lst, ranges_sec, P_THR, timestep):
+def plot_te_distribution_rangebydays(outname, dataLst, labelLst, rangesSec, pTHR, timestep):
     fig, ax = plt.subplots(figsize=(10, 10))
 
-    nFiles = len(data_lst)
-    for rng_name, rng_sec in ranges_sec.items():
-        rng_min = int(rng_sec[0] / timestep)
-        rng_max = int(rng_sec[1] / timestep)
+    nFiles = len(dataLst)
+    for rangeName, rangeSeconds in rangesSec.items():
+        rng_min = int(rangeSeconds[0] / timestep)
+        rng_max = int(rangeSeconds[1] / timestep)
     
         meanTEByDay = []
-        for idxFile, (data, label) in enumerate(zip(data_lst, label_lst)):
+        for idxFile, (data, label) in enumerate(zip(dataLst, labelLst)):
             te, lag, p = data
-            p_rng = p[:,:,rng_min:rng_max]
+            pRng = p[:,:,rng_min:rng_max]
             te_rng = te[:,:,rng_min:rng_max]
-            idx_conn = is_conn(p_rng, P_THR)
+            idx_conn = is_conn(pRng, pTHR)
             meanTEByDay += [np.mean(te_rng[idx_conn.astype(bool)])]
 
         #TODO - extrapolate
-        ax.plot(meanTEByDay, label=rng_name)
+        ax.plot(meanTEByDay, label=rangeName)
     
     ax.set_xticks(list(range(nFiles)))
-    ax.set_xticklabels([label[12:17] for label in label_lst])
+    ax.set_xticklabels([label[12:17] for label in labelLst])
     ax.legend()
     plt.savefig(outname)
     plt.close()
@@ -233,7 +370,7 @@ If have downsample:
 TODO:
 * Crop beginning of window by max delta
 '''
-def plot_te_rel_diff_nlinks_bydays(outname, times_lst1, times_lst2, data_lst1, data_lst2, label_lst1, label_lst2, P_THR, timestep1, timestep2):
+def plot_te_rel_diff_nlinks_bydays(outname, timesLst1, timesLst2, dataLst1, dataLst2, labelLst1, labelLst2, pTHR, timestep1, timestep2):
 
     # Resample two datasets to same sample times within provided range
     def times_match(times1, times2, data1, data2, t_range, RESAMPLE_PARAM):
@@ -247,23 +384,23 @@ def plot_te_rel_diff_nlinks_bydays(outname, times_lst1, times_lst2, data_lst1, d
         
         return times_eff, data1_new, data2_new
     
-    nFiles1 = len(data_lst1)
-    nFiles2 = len(data_lst2)
+    nFiles1 = len(dataLst1)
+    nFiles2 = len(dataLst2)
     assert nFiles1 == nFiles2, "Not the same number of file types"
     
     div = np.zeros(nFiles1)
     for idxFile in range(nFiles1):
-        times1 = times_lst1[idxFile]
-        times2 = times_lst2[idxFile]
-        label1 = label_lst1[idxFile]
-        label2 = label_lst2[idxFile]
+        times1 = timesLst1[idxFile]
+        times2 = timesLst2[idxFile]
+        label1 = labelLst1[idxFile]
+        label2 = labelLst2[idxFile]
         assert label1 == label2, "Basenames not aligned"
-        te1, lag1, p1 = data_lst1[idxFile]
-        te2, lag2, p2 = data_lst2[idxFile]
+        te1, lag1, p1 = dataLst1[idxFile]
+        te2, lag2, p2 = dataLst2[idxFile]
         
         # Select off-diagonal elements. Mark all non-connections with 0
-        is_conn1 = is_conn(p1, P_THR)
-        is_conn2 = is_conn(p2, P_THR)
+        is_conn1 = is_conn(p1, pTHR)
+        is_conn2 = is_conn(p2, pTHR)
         te1_nonan = np.zeros(te1.shape)
         te2_nonan = np.zeros(te2.shape)
         te1_nonan[is_conn1] = te1[is_conn1]
@@ -295,7 +432,7 @@ def plot_te_rel_diff_nlinks_bydays(outname, times_lst1, times_lst2, data_lst1, d
     ax.plot(div)
     ax.set_ylim([0,1])
     ax.set_xticks(list(range(nFiles1)))
-    ax.set_xticklabels([label[12:17] for label in label_lst1])
+    ax.set_xticklabels([label[12:17] for label in labelLst1])
     ax.set_ylabel("Relative diff in TE")
     plt.savefig(outname)
     plt.close()
