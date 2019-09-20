@@ -45,27 +45,29 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     }
     
     nMetrics = len(binaryMetrics)
+    nFiles = len(dataLst)
+    
+    plt.rcParams.update({'font.size': 16})
     fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
     
-    nFiles = len(dataLst)
     for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
         te, lag, p = data
         binaryConnMat = is_conn(p, pTHR)
         
         for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
-            metricByTime = [metricFunc(binaryConnMat[:,:,iTime]) for iTime in len(times)]
+            metricByTime = [metricFunc(binaryConnMat[:,:,iTime]) for iTime in range(len(times))]
             ax[iMetric].plot(times, metricByTime, label=label[12:17], color=((idxFile / nFiles), 0, 0))
 
     # Special properties for number of connections
     N_CH = te.shape[0]
     have_bte = "BivariateTE" in outname
-    plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance', linewidth=2.0)
-    plt.xlim(0, 10)
-    plt.ylim(0, N_CH*(N_CH-1))
+    ax[0].axhline(y=4.0 * N_CH / 12 if have_bte else 1.0 * N_CH / 12, linestyle="--", label='chance', linewidth=2.0)
+    ax[0].set_xlim(0, 10)
+    ax[0].set_ylim(0, N_CH*(N_CH-1))
     
     for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
-        ax[iMetric].xlabel("time, seconds")
-        ax[iMetric].ylabel(metricName)
+        ax[iMetric].set_xlabel("time, seconds")
+        ax[iMetric].set_ylabel(metricName)
         ax[iMetric].legend()
     plt.savefig(outname)
     plt.close()
@@ -102,8 +104,8 @@ def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, tim
             teMetric = [metricFunc(teZeroNAN[:,:,iTime]) for iTime in range(len(times))]
             ax[iMetric].plot(times, teMetric, label=label[12:17], color=((idxFile / nFiles), 0, 0))
 
-        ax[iMetric].xlabel("time, seconds")
-        ax[iMetric].ylabel(metricName + " transfer entropy")
+        ax[iMetric].set_xlabel("time, seconds")
+        ax[iMetric].set_ylabel(metricName + " transfer entropy")
         ax[iMetric].legend()
     plt.savefig(outname)
     plt.close()

@@ -11,13 +11,15 @@ def offdiag_idx(N):
 
 # Set diagonal to zero
 def offdiag(M):
-    return M - np.diag(np.diagonal(M))
+    MZeroDiag = np.copy(M)
+    np.fill_diagonal(MZeroDiag, 0)
+    return MZeroDiag
 
 # Set diagonal to zero, then normalize
 def offdiag_norm(M):
-    Mnodiag = offdiag(M)
-    Mmax = np.max(Mnodiag)
-    return Mnodiag if Mmax == 0 else Mnodiag / Mmax
+    MZeroDiag = offdiag(M)
+    Mmax = np.max(np.abs(MZeroDiag))
+    return MZeroDiag if Mmax == 0 else MZeroDiag / Mmax
 
 # Compute ratio of average off-diagonal to average diagonal elements
 def diagonal_dominance(M):
