@@ -46,18 +46,30 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     
     nMetrics = len(binaryMetrics)
     nFiles = len(dataLst)
-    
-    plt.rcParams.update({'font.size': 16})
-    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
-    
-    for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+    nTimes = len(timesLst[0])    
+    metricArr = np.zeros((nMetrics, nFiles, nTimes))
+    timesAll = timesLst[0]
+    for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+        assert times == timesAll, "Times for all files must be equal"
+        
         te, lag, p = data
         binaryConnMat = is_conn(p, pTHR)
         
         for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
-            metricByTime = [metricFunc(binaryConnMat[:,:,iTime]) for iTime in range(len(times))]
-            ax[iMetric].plot(times, metricByTime, label=label[12:17], color=((idxFile / nFiles), 0, 0))
-
+            metricArr[iMetric, iFile] = np.array([metricFunc(binaryConnMat[:,:,iTime]) for iTime in range(nTimes)])
+            
+    # Metrics by time
+    plt.rcParams.update({'font.size': 16})
+    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
+    for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
+        metricMean = np.mean(metricArr[iMetric], axis=0)
+        metricStd  = np.mean(metricArr[iMetric], axis=0)
+        
+        ax[iMetric].fill_between(timesAll, metricMean-metricStd, metricMean+metricStd, alpha=0.3)
+        ax[iMetric].set_titke("nPoints="+str(nFiles))
+        ax[iMetric].set_xlabel("time, seconds")
+        ax[iMetric].set_ylabel(metricName)
+        
     # Special properties for number of connections
     N_CH = te.shape[0]
     have_bte = "BivariateTE" in outname
@@ -65,10 +77,8 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     ax[0].set_xlim(0, 10)
     ax[0].set_ylim(0, N_CH*(N_CH-1))
     
-    for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
-        ax[iMetric].set_xlabel("time, seconds")
-        ax[iMetric].set_ylabel(metricName)
-        ax[iMetric].legend()
+    # ax[iMetric].plot(times, metricByTime, label=label[12:17], color=((iFile / nFiles), 0, 0))
+    # ax[iMetric].legend()
     plt.savefig(outname)
     plt.close()
     
@@ -113,6 +123,7 @@ def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, tim
     
 # Strategy 1: Conn=True if have at least 1 conn within range
 # Strategy 2: Compute 1 metric per time step, average over range
+#TODO - extrapolate simulated result T1 nconn
 def plot_te_binary_metrics_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
     binaryMetrics = {    # 1 number per time series of matrices
         "totalConn"               : np.sum,
@@ -128,33 +139,51 @@ def plot_te_binary_metrics_rangebydays(outname, timesLst, dataLst, labelLst, ran
         'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
     }
     
-    
-    fig, ax = plt.subplots(figsize=(10, 10))
-
+    nMetrics = len(binaryMetrics)
     nFiles = len(dataLst)
-    for rangeName, rangeSeconds in rangesSec.items():    
-        atLeast1ConnPerSession = []
-        for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-            rng = slice_sorted(times, rangeSeconds[0])
-            
+    nTimes = len(timesLst[0])    
+    #metricArr = np.zeros((nMetrics, nFiles, nTimes))
+    timesAll = timesLst[0]
+    
+    fig, ax = plt.subplots(nrows=2, ncols=nMetrics, figsize=(10*nMetrics, 2*10))
+    
+    for rangeName, rangeSeconds in rangesSec.items():  
+        rng = slice_sorted(times, rangeSeconds[0])
+    
+        metricArrStrat1    = np.zeros((nMetrics, nFiles))
+        metricArrStrat2mu  = np.zeros((nMetrics, nFiles))
+        metricArrStrat2std = np.zeros((nMetrics, nFiles))
+    
+        for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+            assert times == timesAll, "Times for all files must be equal"
+
             te, lag, p = data
-            pRng = p[:,:,rng[0]:rng[1]]
-            atLeast1ConnPerSession += [(np.sum(is_conn(pRng, pTHR), axis=2) > 0).astype(int)]
+            binaryConnMatRng = is_conn(p[:,:,rng[0]:rng[1]], pTHR)
+            binaryConnMatRngAtLeast1 = np.max(binaryConnMat, axis = 2)
 
-        nConnPerSession = [np.sum(c) for c in atLeast1ConnPerSession]
-        sharedConn      = [np.nan] + [np.sum(atLeast1ConnPerSession[idxFile-1] + atLeast1ConnPerSession[idxFile] == 2) for idxFile in range(1, nFiles)]
-
-        #TODO - extrapolate
-        #have_bte = "BivariateTE" in outname
-        #plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance')
-        ax.plot(nConnPerSession, label=rangeName+'_total')
-        ax.plot(sharedConn, '--', label=rangeName+'_shared')
+            for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
+                metricStrat2arr = np.array([metricFunc(binaryConnMatRng[:,:,iTime]) for iTime in range(binaryConnMatRng.shape[2])])
+                metricArrStrat1[iMetric, iFile]   = metricFunc(binaryConnMatRngAtLeast1)
+                metricArrStrat2mu[iMetric, iFile] = np.mean(metricStrat2arr)
+                metricArrStrat2std[iMetric, iFile] = np.std(metricStrat2arr)
+                
+        pltx     = np.arange(nFiles)
+        plt1y    = metricArrStrat1[iMetric]
+        plt2y    = metricArrStrat2mu[iMetric]
+        plt2ymin = metricArrStrat2mu[iMetric] - metricArrStrat2std[iMetric]
+        plt2ymax = metricArrStrat2mu[iMetric] + metricArrStrat2std[iMetric]
+                
+        ax[0, iMetric].plot(plt1y, label=rangeName)
+        ax[1, iMetric].fill_between(pltx, plt2ymin, plt2ymax, label=rangeName)
+        #ax[1, iMetric].plot(pltx, plt2y, label=rangeName)
     
     N_CH = te.shape[0]
-    ax.set_ylim(0, N_CH*(N_CH-1))
-    ax.set_xticks(list(range(nFiles)))
-    ax.set_xticklabels([label[12:17] for label in labelLst])
-    ax.legend()
+    for iStrat in range(2):
+        ax[iStrat, 0].set_ylim(0, N_CH*(N_CH-1))
+        for iMetric in range(nMetrics):
+            ax[iStrat, iMetric].set_xticks(list(range(nFiles)))
+            ax[iStrat, iMetric].set_xticklabels([label[12:17] for label in labelLst])
+            ax[iStrat, iMetric].legend()
     plt.savefig(outname)
     plt.close()
   
