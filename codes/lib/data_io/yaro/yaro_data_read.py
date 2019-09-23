@@ -22,9 +22,10 @@ def read_neuro_perf(folderpath, verbose=True):
     fpath_performance = os.path.join(folderpath, "Transfer Entropy")
     fname_performance = os.path.join(fpath_performance, "performance.mat")
 
-    data = loadmat(fname_data)['data']
-    behavior = loadmat(fname_behaviour)
-    performance = loadmat(fname_performance)['performance']
+    waitRetry = 3  # Seconds wait before trying to reload the file if it is not accessible
+    data        = loadmat(fname_data, waitRetry=waitRetry)['data']
+    behavior    = loadmat(fname_behaviour, waitRetry=waitRetry)
+    performance = loadmat(fname_performance, waitRetry=waitRetry)['performance']
     
     # Get rid of useless fields in behaviour
     behavior = {k : v for k, v in behavior.items() if k[0] != '_'}
