@@ -47,23 +47,19 @@ def idtxlParallelCPU(data, settings, NCore = None):
     return rez
 
 
-# def multiParallelTask(sw, settings, dataIDTxl_lst, logName):
-#     with open(logName, "a+") as f:
-#         f.write("Started:  "+ str(sw) + '\n')
-#     analysis_class = getAnalysisClass(settings['methods'][sw[0]])
-#     rez = analysis_class.analyse_single_target(settings=settings, data=dataIDTxl_lst[sw[1]], target=sw[2])
-#     with open(logName, "a+") as f:
-#         f.write("Finished: "+ str(sw) + '\n')
-#     return rez
-
 def idtxlParallelCPUMulti(data_lst, settings, taskName, NCore = None):
+    '''
+    Performs parameter sweep over methods, data sets and channels,
+     distributing work equally among available processes
+    '''
     
     # Determine parameters for the parameter sweep
-    idxProcesses = settings['dim_order'].index("p")
-    mIdxs = list(range(len(settings['methods'])))
-    dIdxs = list(range(len(data_lst)))
-    pIdxs = list(range(data_lst[0].shape[idxProcesses]))
+    idxProcesses = settings['dim_order'].index("p")      # Index of Processes dimension in data
+    mIdxs = np.arange(len(settings['methods']))          # Indices of all methods
+    dIdxs = np.arange(len(data_lst))                     # Indices of all data sets
+    pIdxs = np.arange(data_lst[0].shape[idxProcesses])   # Indices of all processes (aka data channels)
     sweepLst = [(m, d, p) for m in mIdxs for d in dIdxs for p in pIdxs]
+    sweepIdxs = np.arange(len(sweepLst))
     
     # Convert data to ITDxl format
     dataIDTxl_lst = [Data(d, dim_order=settings['dim_order']) for d in data_lst]
@@ -82,17 +78,18 @@ def idtxlParallelCPUMulti(data_lst, settings, taskName, NCore = None):
 #     task = lambda sw: multiParallelTask(sw, settings, dataIDTxl_lst, logName)
 
     def multiParallelTask(sw):
+        methodIdx, dataIdx, targetIdx = sw
         with open(logName, "a+") as f:
             f.write(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()) + "Started:  "+ str(sw) + '\n')
-        analysis_class = getAnalysisClass(settings['methods'][sw[0]])
-        rez = analysis_class.analyse_single_target(settings=settings, data=dataIDTxl_lst[sw[1]], target=sw[2])
+        analysis_class = getAnalysisClass(settings['methods'][methodIdx])
+        rez = analysis_class.analyse_single_target(settings=settings, data=dataIDTxl_lst[dataIdx], target=int(targetIdx))
         with open(logName, "a+") as f:
             f.write(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()) + "Finished: "+ str(sw) + '\n')
         return rez
 
     rez_multilst = pool.map(multiParallelTask, sweepLst)
     
-    tripleIdxs = dict(zip(sweepLst, list(range(len(sweepLst)))))
+    tripleIdxs = dict(zip(sweepLst, sweepIdxs))
     rez = [[[rez_multilst[tripleIdxs[(m, d, p)]] for p in pIdxs] for d in dIdxs] for m in mIdxs]
     
     with open(logName, "a+") as f:
