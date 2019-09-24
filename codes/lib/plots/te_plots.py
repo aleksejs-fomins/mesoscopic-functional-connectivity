@@ -1,7 +1,6 @@
 import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
-import bisect
 
 # Export library path
 thispath = os.path.dirname(os.path.abspath(__file__))
@@ -10,25 +9,9 @@ sys.path.append(libpath)
 
 import graph_lib
 from signal_lib import resample
+from aux_functions import slice_sorted
 
-# Determine where a link is present
-def is_conn(p, pTHR):
-    pTMP = np.copy(p)
-    pTMP[np.isnan(p)] = 100  # Set p-value of NAN connections to infinity to exclude them
-    return pTMP < pTHR      # Only include connections that are likely (low p-value)
-
-# Indices of all off-diagonal elements
-def is_not_diag(N):
-    return ~np.eye(N)# (1 - np.diag(np.ones(N))).astype(bool)
-
-# Compute indices of slice of sorted data which fit into the provided range
-def slice_sorted(data, rng):
-    return [
-        bisect.bisect_left(data, rng[0]),
-        bisect.bisect_right(data, rng[1])]
-
-
-# Number of connections as a function of time
+# Metrics for binary connectivity matrix as function of time
 def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, timestep):
     binaryMetrics = {    # 1 number per matrix
         "totalConn"               : np.sum,
@@ -50,10 +33,10 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     metricArr = np.zeros((nMetrics, nFiles, nTimes))
     timesAll = timesLst[0]
     for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-        assert times == timesAll, "Times for all files must be equal"
+        assert np.array_equal(times, timesAll), "Times for all files must be equal"
         
         te, lag, p = data
-        binaryConnMat = is_conn(p, pTHR)
+        binaryConnMat = graph_lib.is_conn(p, pTHR)
         
         for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
             metricArr[iMetric, iFile] = np.array([metricFunc(binaryConnMat[:,:,iTime]) for iTime in range(nTimes)])
@@ -63,10 +46,11 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
     for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
         metricMean = np.mean(metricArr[iMetric], axis=0)
-        metricStd  = np.mean(metricArr[iMetric], axis=0)
+        metricStd  = np.std(metricArr[iMetric], axis=0)
         
+        ax[iMetric].plot(timesAll, metricMean)
         ax[iMetric].fill_between(timesAll, metricMean-metricStd, metricMean+metricStd, alpha=0.3)
-        ax[iMetric].set_titke("nPoints="+str(nFiles))
+        ax[iMetric].set_title("nPoints="+str(nFiles))
         ax[iMetric].set_xlabel("time, seconds")
         ax[iMetric].set_ylabel(metricName)
         
@@ -81,9 +65,8 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     # ax[iMetric].legend()
     plt.savefig(outname)
     plt.close()
-    
-    
-# Number of connections as a function of time
+
+# Metrics for TE matrix as function of time
 def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, timestep):        
     floatMetrics = {    # 1 number per matrix
         "maximal TE"              : np.max,
@@ -102,28 +85,45 @@ def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, tim
     }
     
     
-    nMetrics = len(metrics)
+    # Compute
+    nMetrics = len(floatMetrics)
     nFiles = len(dataLst)
+    nTimes = len(timesLst[0])    
+    metricArr = np.zeros((nMetrics, nFiles, nTimes))
+    timesAll = timesLst[0]
+    for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+        assert np.array_equal(times, timesAll), "Times for all files must be equal"
+        
+        te, lag, p = data
+        teZeroNAN = np.copy(te)
+        teZeroNAN[~graph_lib.is_conn(p, pTHR)] = 0   # Set TE of all non-existing connections to zero
+        
+        for iMetric, (metricName, metricFunc) in enumerate(floatMetrics.items()):
+            metricArr[iMetric, iFile] = np.array([metricFunc(teZeroNAN[:,:,iTime]) for iTime in range(nTimes)])
+            
+    # Plot
+    plt.rcParams.update({'font.size': 16})
     fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
-    for iMetric, (metricName, metricFunc) in enumerate(metrics.items()):
-        for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-            te, lag, p = data
-            teZeroNAN = np.copy(te)
-            teZeroNAN[~is_conn(p, pTHR)] = 0   # Set TE of all non-existing connections to zero
-
-            teMetric = [metricFunc(teZeroNAN[:,:,iTime]) for iTime in range(len(times))]
-            ax[iMetric].plot(times, teMetric, label=label[12:17], color=((idxFile / nFiles), 0, 0))
-
+    for iMetric, (metricName, metricFunc) in enumerate(floatMetrics.items()):
+        metricMean = np.mean(metricArr[iMetric], axis=0)
+        metricStd  = np.std(metricArr[iMetric], axis=0)
+        
+        ax[iMetric].plot(timesAll, metricMean)
+        ax[iMetric].fill_between(timesAll, metricMean-metricStd, metricMean+metricStd, alpha=0.3)
+        ax[iMetric].set_title("nPoints="+str(nFiles))
         ax[iMetric].set_xlabel("time, seconds")
         ax[iMetric].set_ylabel(metricName + " transfer entropy")
-        ax[iMetric].legend()
+        
+#         ax[iMetric].plot(times, teMetric, label=label[12:17], color=((idxFile / nFiles), 0, 0))
+#         ax[iMetric].legend()
     plt.savefig(outname)
     plt.close()
 
-    
-# Strategy 1: Conn=True if have at least 1 conn within range
-# Strategy 2: Compute 1 metric per time step, average over range
-#TODO - extrapolate simulated result T1 nconn
+# Metrics for binary connectivity matrix as function of days
+#   Strategy 1: Conn=True if have at least 1 conn within range
+#   Strategy 2: Compute 1 metric per time step, average over range
+# TODO - vertical line for performance
+# TODO - extrapolate simulated result T1 nconn
 def plot_te_binary_metrics_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
     binaryMetrics = {    # 1 number per time series of matrices
         "totalConn"               : np.sum,
@@ -141,84 +141,121 @@ def plot_te_binary_metrics_rangebydays(outname, timesLst, dataLst, labelLst, ran
     
     nMetrics = len(binaryMetrics)
     nFiles = len(dataLst)
-    nTimes = len(timesLst[0])    
-    #metricArr = np.zeros((nMetrics, nFiles, nTimes))
     timesAll = timesLst[0]
     
     fig, ax = plt.subplots(nrows=2, ncols=nMetrics, figsize=(10*nMetrics, 2*10))
     
-    for rangeName, rangeSeconds in rangesSec.items():  
-        rng = slice_sorted(times, rangeSeconds[0])
-    
+    for rangeName, rangeSeconds in rangesSec.items():
         metricArrStrat1    = np.zeros((nMetrics, nFiles))
         metricArrStrat2mu  = np.zeros((nMetrics, nFiles))
         metricArrStrat2std = np.zeros((nMetrics, nFiles))
     
+        # Compute metrics
         for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-            assert times == timesAll, "Times for all files must be equal"
+            assert np.array_equal(times, timesAll), "Times for all files must be equal"
+
+            rng = slice_sorted(times, rangeSeconds)
 
             te, lag, p = data
-            binaryConnMatRng = is_conn(p[:,:,rng[0]:rng[1]], pTHR)
-            binaryConnMatRngAtLeast1 = np.max(binaryConnMat, axis = 2)
+            binaryConnMatRng = graph_lib.is_conn(p[:,:,rng[0]:rng[1]], pTHR)
+            binaryConnMatRngAtLeast1 = np.max(binaryConnMatRng, axis = 2)
 
             for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
                 metricStrat2arr = np.array([metricFunc(binaryConnMatRng[:,:,iTime]) for iTime in range(binaryConnMatRng.shape[2])])
                 metricArrStrat1[iMetric, iFile]   = metricFunc(binaryConnMatRngAtLeast1)
                 metricArrStrat2mu[iMetric, iFile] = np.mean(metricStrat2arr)
                 metricArrStrat2std[iMetric, iFile] = np.std(metricStrat2arr)
-                
-        pltx     = np.arange(nFiles)
-        plt1y    = metricArrStrat1[iMetric]
-        plt2y    = metricArrStrat2mu[iMetric]
-        plt2ymin = metricArrStrat2mu[iMetric] - metricArrStrat2std[iMetric]
-        plt2ymax = metricArrStrat2mu[iMetric] + metricArrStrat2std[iMetric]
-                
-        ax[0, iMetric].plot(plt1y, label=rangeName)
-        ax[1, iMetric].fill_between(pltx, plt2ymin, plt2ymax, label=rangeName)
-        #ax[1, iMetric].plot(pltx, plt2y, label=rangeName)
-    
+
+        # Plot metrics
+        for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
+            pltx     = np.arange(nFiles)
+            plt1y    = metricArrStrat1[iMetric]
+            plt2y    = metricArrStrat2mu[iMetric]
+            plt2ymin = metricArrStrat2mu[iMetric] - metricArrStrat2std[iMetric]
+            plt2ymax = metricArrStrat2mu[iMetric] + metricArrStrat2std[iMetric]
+
+            ax[0, iMetric].plot(plt1y, label=rangeName)
+            ax[1, iMetric].plot(pltx, plt2y, label=rangeName)
+            ax[1, iMetric].fill_between(pltx, plt2ymin, plt2ymax, alpha=0.3)#, label=rangeName)
+
+    # Set labels on axis
     N_CH = te.shape[0]
     for iStrat in range(2):
         ax[iStrat, 0].set_ylim(0, N_CH*(N_CH-1))
         for iMetric in range(nMetrics):
+            ax[iStrat, iMetric].set_ylabel(metricName)
             ax[iStrat, iMetric].set_xticks(list(range(nFiles)))
-            ax[iStrat, iMetric].set_xticklabels([label[12:17] for label in labelLst])
+            ax[iStrat, iMetric].set_xticklabels([label[12:17] for label in labelLst], rotation='vertical')
             ax[iStrat, iMetric].legend()
     plt.savefig(outname)
     plt.close()
   
-    
-def plot_te_mean_tot_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
-    metrics = {
-        "mean" : np.mean,
-        "tot" : np.sum}
-    
-    nMetrics = len(metrics)
+# Metrics for binary connectivity matrix as function of days
+#   Strategy 1: Conn=True if have at least 1 conn within range
+#   Strategy 2: Compute 1 metric per time step, average over range
+def plot_te_float_metrics_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
+    floatMetrics = {  # 1 number per time series of matrices
+        "mean TE"               : lambda M: np.mean(M[M > 0]),
+        "sum TE"                : np.sum,
+        'std of in degree'      : lambda M: np.std(graph_lib.degree_in(M)),
+        #         'out degree'              : graph_lib.degree_out,
+        #         'total degree'            : graph_lib.degree_tot,
+        #         'reciprocal degree'       : graph_lib.degree_rec,
+        'cc-total-normalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized' : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'      : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'    : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=False)),
+        'cc-out-normalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
+    }
+
+    nMetrics = len(floatMetrics)
     nFiles = len(dataLst)
-    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
-    
-    for iMetric, (metricName, metricFunc) in enumerate(metrics.items()):
-        for rangeName, rangeSeconds in rangesSec.items():
-            teMetricArr = np.zeros(nFiles)
-            for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-                rng = slice_sorted(times, rangeSeconds[0])
-                te, lag, p = data
-                pRng = p[:,:,rng[0]:rng[1]]
+    timesAll = timesLst[0]
 
-                teFlatRange = te[is_conn(pRng, pTHR)]
+    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10 * nMetrics, 10))
 
-                teMetricArr[idxFile] = metricFunc(teFlatRange)
+    for rangeName, rangeSeconds in rangesSec.items():
+        metricArrMu = np.zeros((nMetrics, nFiles))
+        metricArrStd = np.zeros((nMetrics, nFiles))
 
-            ax[iMetric].plot(teMetricArr, label=rangeName)
-        
-        ax[iMetric].set_title(metricName + " transfer entropy")
+        # Compute metrics
+        for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
+            assert np.array_equal(times, timesAll), "Times for all files must be equal"
+
+            rng = slice_sorted(times, rangeSeconds)
+
+            teRng, lagRng, pRng = data[..., rng[0]:rng[1]]
+            connIdx = graph_lib.is_conn(pRng, pTHR)
+
+            teRngZeroNAN = np.copy(teRng)
+            teRngZeroNAN[~connIdx] = 0
+
+            for iMetric, (metricName, metricFunc) in enumerate(floatMetrics.items()):
+                tmp = [metricFunc(teRngZeroNAN[:, :, iTime]) for iTime in range(teRngZeroNAN.shape[2])]
+                metricArrMu[iMetric, iFile] = np.mean(tmp)
+                metricArrStd[iMetric, iFile] = np.std(tmp)
+
+        # Plot metrics
+        for iMetric, (metricName, metricFunc) in enumerate(floatMetrics.items()):
+            pltx = np.arange(nFiles)
+            plty = metricArrMu[iMetric]
+            pltymin = metricArrMu[iMetric] - metricArrStd[iMetric]
+            pltymax = metricArrMu[iMetric] + metricArrStd[iMetric]
+
+            ax[iMetric].plot(pltx, plty, label=rangeName)
+            ax[iMetric].fill_between(pltx, pltymin, pltymax, alpha=0.3)#, label=rangeName)
+
+    # Set ticks for x-axis
+    for iMetric, (metricName, metricFunc) in enumerate(floatMetrics.items()):
+        ax[iMetric].set_ylabel(metricName + " transfer entropy")
         ax[iMetric].set_xticks(list(range(nFiles)))
-        ax[iMetric].set_xticklabels([label[12:17] for label in labelLst])
+        ax[iMetric].set_xticklabels([label[12:17] for label in labelLst], rotation='vertical')
         ax[iMetric].legend()
     plt.savefig(outname)
     plt.close()
-    
-    
+
+
 def plot_te_nconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
     fig, ax = plt.subplots(figsize=(10, 10))
 
@@ -230,7 +267,7 @@ def plot_te_nconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, p
             
             te, lag, p = data
             pRng = p[:,:,rng[0]:rng[1]]
-            atLeast1ConnPerSession += [(np.sum(is_conn(pRng, pTHR), axis=2) > 0).astype(int)]
+            atLeast1ConnPerSession += [(np.sum(graph_lib.is_conn(pRng, pTHR), axis=2) > 0).astype(int)]
 
         nConnPerSession = [np.sum(c) for c in atLeast1ConnPerSession]
         sharedConn      = [np.nan] + [np.sum(atLeast1ConnPerSession[idxFile-1] + atLeast1ConnPerSession[idxFile] == 2) for idxFile in range(1, nFiles)]
@@ -261,7 +298,7 @@ def plot_te_avgnconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec
             te, lag, p = data
             pRng = p[:,:,rng[0]:rng[1]]
             
-            conn1DOffDiag = is_conn(pRng, pTHR)[is_not_diag(p.shape[0])]
+            conn1DOffDiag = graph_lib.is_conn(pRng, pTHR)[graph_lib.offdiag_idx(p.shape[0])]
             freqConnRange += [np.mean(conn1DOffDiag, axis=1)]
 
         freqConnPerSession = [np.mean(freq) for freq in freqConnRange]
@@ -320,7 +357,7 @@ def plot_te_shared_link_scatter(outname, timesLst, dataLst, labelLst, rangesSec,
             
             te, lag, p = data
             pRng = p[:,:,rng[0]:rng[1]]
-            nConnPerRng += [np.sum(is_conn(pRng, pTHR), axis=2)]
+            nConnPerRng += [np.sum(graph_lib.is_conn(pRng, pTHR), axis=2)]
 
         # Compute and plot number of shared connections
         sharedConn = []
@@ -349,7 +386,7 @@ def plot_te_distribution(outname, dataLst, labelLst, pTHR, timestep):
     nFiles = len(dataLst)
     for idxFile, (data, label) in enumerate(zip(dataLst, labelLst)):
         te, lag, p = data
-        teflat = te[is_conn(p, pTHR)]
+        teflat = te[graph_lib.is_conn(p, pTHR)]
         
         plt.hist(teflat, bins='auto', label=label[12:17], color=((idxFile / nFiles), 0, 0), alpha=0.3)
 
@@ -375,7 +412,7 @@ def plot_te_distribution_rangebydays(outname, dataLst, labelLst, rangesSec, pTHR
             te, lag, p = data
             pRng = p[:,:,rng_min:rng_max]
             te_rng = te[:,:,rng_min:rng_max]
-            idx_conn = is_conn(pRng, pTHR)
+            idx_conn = graph_lib.is_conn(pRng, pTHR)
             meanTEByDay += [np.mean(te_rng[idx_conn.astype(bool)])]
 
         #TODO - extrapolate
@@ -430,14 +467,14 @@ def plot_te_rel_diff_nlinks_bydays(outname, timesLst1, timesLst2, dataLst1, data
         te2, lag2, p2 = dataLst2[idxFile]
         
         # Select off-diagonal elements. Mark all non-connections with 0
-        is_conn1 = is_conn(p1, pTHR)
-        is_conn2 = is_conn(p2, pTHR)
+        is_conn1 = graph_lib.is_conn(p1, pTHR)
+        is_conn2 = graph_lib.is_conn(p2, pTHR)
         te1_nonan = np.zeros(te1.shape)
         te2_nonan = np.zeros(te2.shape)
         te1_nonan[is_conn1] = te1[is_conn1]
         te2_nonan[is_conn2] = te2[is_conn2]
-        te1_flat = te1_nonan[is_not_diag(te1.shape[0])]
-        te2_flat = te2_nonan[is_not_diag(te2.shape[0])]
+        te1_flat = te1_nonan[graph_lib.offdiag_idx(te1.shape[0])]
+        te2_flat = te2_nonan[graph_lib.offdiag_idx(te2.shape[0])]
         
         t_range = [
             np.max([times1[0], times2[0]]),

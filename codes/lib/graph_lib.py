@@ -21,6 +21,13 @@ def offdiag_norm(M):
     Mmax = np.max(np.abs(MZeroDiag))
     return MZeroDiag if Mmax == 0 else MZeroDiag / Mmax
 
+# Given a p-value matrix and a threshold, determine which links are below threshold
+# Any np.nan instances are considered above threshold
+def is_conn(p, pTHR):
+    pTMP = np.copy(p)
+    pTMP[np.isnan(p)] = 100  # Set p-value of NAN connections to infinity to exclude them
+    return pTMP < pTHR      # Only include connections that are likely (low p-value)
+
 # Compute ratio of average off-diagonal to average diagonal elements
 def diagonal_dominance(M):
     nNode = M.shape[0]
