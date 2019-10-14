@@ -76,70 +76,75 @@ with open(json_fname, 'r') as f:
 ##############################
 
 for iFile, folderPathName in enumerate(datapaths):
-        folderName = os.path.basename(folderPathName)
-        #############################
-        # Reading and downsampling
-        #############################
+    folderName = os.path.basename(folderPathName)
+    #############################
+    # Reading and downsampling
+    #############################
 
-        # Read LVM file from command line
-        data, behaviour, performance = read_neuro_perf(folderPathName)
+    # Read LVM file from command line
+    data, behaviour, performance = read_neuro_perf(folderPathName)
 
-        # Get parameters
+    # Get parameters
+    nTrials, nTimes, nChannels = data.shape
+    print("Loaded neuronal data with (nTrials, nTimes, nChannels)=", data.shape)
+
+    if nTimes != 201:
+        print("--Warning, number of timesteps: ", nTimes)
+        if nTimes > 201:
+            nTimes = 201
+            data = data[:, :nTimes, :]
+            print("---Cropped down to", nTimes)
+
+
+    # Timeline (x-axis)
+    tlst = params["exp_timestep"] * np.linspace(0, nTimes, nTimes)
+
+    # Downsample data
+    if params["resample"] is not None:
+        print("Downsampling from", params["exp_timestep"], "ms to", params["bin_timestep"], "ms")
+        params["timestep"] = params["bin_timestep"]
+        nTimesDownsampled = int(nTimes * params["exp_timestep"] / params["timestep"])
+        tlst_down = params["timestep"] * np.linspace(0, nTimesDownsampled, nTimesDownsampled)
+        data_down = np.array([[resample(tlst, data[i, :, j], tlst_down, params["resample"])
+                            for i in range(nTrials)]
+                            for j in range(nChannels)])
+
+        # Replace old data with subsampled one
+        tlst, data = tlst_down, data_down.transpose(1, 2, 0)
         nTrials, nTimes, nChannels = data.shape
-        print("Loaded neuronal data with (nTrials, nTimes, nChannels)=", data.shape)
+        print("After downsampling data shape is (nTrials, nTimes, nChannels)=", data.shape)
 
-        #assert nTimes == 201, "The number of timesteps must be 201 for all data, got "+str(nTimes)
-        
+    else:
+        print("Skip resampling")
+        params["timestep"] = params["exp_timestep"]
 
-        # Timeline (x-axis)
-        tlst = params["exp_timestep"] * np.linspace(0, nTimes, nTimes)
 
-        # Downsample data
-        if params["resample"] is not None:
-            print("Downsampling from", params["exp_timestep"], "ms to", params["bin_timestep"], "ms")
-            params["timestep"] = params["bin_timestep"]
-            nTimesDownsampled = int(nTimes * params["exp_timestep"] / params["timestep"])
-            tlst_down = params["timestep"] * np.linspace(0, nTimesDownsampled, nTimesDownsampled)
-            data_down = np.array([[resample(tlst, data[i, :, j], tlst_down, params["resample"])
-                                for i in range(nTrials)]
-                                for j in range(nChannels)])
-            
-            # Replace old data with subsampled one
-            tlst, data = tlst_down, data_down.transpose(1, 2, 0)
-            nTrials, nTimes, nChannels = data.shape
-            print("After downsampling data shape is (nTrials, nTimes, nChannels)=", data.shape)
-            
+    for trialType in params['trial_types']:
+
+        if trialType is None:
+            dataEff = data
+            fileNameSuffix = ""
         else:
-            print("Skip resampling")
-            params["timestep"] = params["exp_timestep"]
+            dataEff = data[np.array(behaviour[trialType], dtype=int) - 1]
+            fileNameSuffix = "_" + trialType
+            print("For trialType =", trialType, "the shape is (nTrials, nTimes, nChannels)=", dataEff.shape)
 
-            
-        for trialType in params['trial_types']:
-            
-            if trialType is None:
-                dataEff = data
-                fileNameSuffix = ""
-            else:
-                dataEff = data[np.array(behaviour[trialType], dtype=int) - 1]
-                fileNameSuffix = "_" + trialType
-                print("For trialType =", trialType, "the shape is (nTrials, nTimes, nChannels)=", dataEff.shape)
-
-            #############################
-            # Analysis
-            #############################
-
+        #############################
+        # Analysis
+        #############################
+        
+        if dataEff.shape[0] < 50:
+            print("Number of trials", data_lst.shape, "below threshold, skipping analysis")
+        else:
             teWindow = idtxl_settings["max_lag_sources"] + 1
-            #teWindow = 2
 
             data_range = list(range(nTimes - teWindow + 1))
             data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
             rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, NCore=NCore)
 
-            print(data_range)
-
             for iMethod, method in enumerate(idtxl_settings['methods']):
                 te_data = np.full((3, nChannels, nChannels, nTimes), np.nan)
-                
+
                 for iRange in data_range:
                     te_data[..., iRange + idtxl_settings["max_lag_sources"]] = np.array(
                         idtxlResultsParse(rez[iMethod][iRange], nChannels, method=method, storage='matrix')

@@ -20,12 +20,17 @@ def read_neuro_perf(folderpath, verbose=True):
     fname_data        = os.path.join(folderpath, "data.mat")
     fname_behaviour   = os.path.join(folderpath, "behaviorvar.mat")
     fpath_performance = os.path.join(folderpath, "Transfer Entropy")
-    fname_performance = os.path.join(fpath_performance, "performance.mat")
-
+    
     waitRetry = 3  # Seconds wait before trying to reload the file if it is not accessible
     data        = loadmat(fname_data, waitRetry=waitRetry)['data']
     behavior    = loadmat(fname_behaviour, waitRetry=waitRetry)
-    performance = loadmat(fname_performance, waitRetry=waitRetry)['performance']
+    
+    if not os.path.exists(fpath_performance):
+        print("--Warning: No performance metrics found for", os.path.dirname(folderpath), "returning, None")
+        performance = None
+    else:
+        fname_performance = os.path.join(fpath_performance, "performance.mat")
+        performance = loadmat(fname_performance, waitRetry=waitRetry)['performance']
     
     # Get rid of useless fields in behaviour
     behavior = {k : v for k, v in behavior.items() if k[0] != '_'}
@@ -38,18 +43,34 @@ def read_neuro_perf(folderpath, verbose=True):
     #     d_trials = merge_dict(d_trials, matstruct2dict(behavior['trials'][i]))
     # behavior['trials'] = d_trials
     
-    # CONSISTENCY TEST:
-    behKeys = ['iGO', 'iNOGO', 'iFA', 'iMISS']
+    # CONSISTENCY TEST 1 - If behavioural trials are more than neuronal, crop:
     dataNTrials = data.shape[0]
-    behavToArray = lambda b: np.array([b], dtype=int) if type(b)==int else b
-    behNTrials = np.sum([len(behavToArray(behavior[k])) for k in behKeys])
-    behMaxIdx  = np.max(np.hstack([behavToArray(behavior[k]) for k in behKeys])) - 1  # Note Matlab indices start from 1    
-    if dataNTrials < behNTrials: 
-        # raise ValueError("Behaviour has more trials than data", behNTrials, dataNTrials)
-        print("Behaviour has more trials than data", behNTrials, dataNTrials)
-    if (behMaxIdx is not None) and (behMaxIdx >= dataNTrials):
-        # raise ValueError("Behaviour max index must be less than number of trials", behMaxIdx, dataNTrials)
-        print("Behaviour max index must be less than number of trials", behMaxIdx, dataNTrials)
+    behavToArray = lambda b: np.array([b], dtype=int) if type(b)==int else b   # If array has 1 index it appears as a number :(
+    behKeys = ['iGO', 'iNOGO', 'iFA', 'iMISS']
+    for behKey in behKeys:
+        behArray = behavToArray(behavior[behKey])
+        
+        behNTrialsThis = len(behArray)
+        if behNTrialsThis > 0:
+            behMaxIdxThis  = np.max(behArray) - 1  # Note Matlab indices start from 1            
+            if behMaxIdxThis >= dataNTrials:
+                print("--Warning: For", behKey, "behaviour max index", behMaxIdxThis, "exceeds nTrials", dataNTrials)
+                behavior[behKey] = behavior[behKey][behavior[behKey] < dataNTrials]
+                print("---Cropped excessive behaviour trials from", behNTrialsThis, "to", len(behavior[behKey]))
+            
+    # CONSISTENCY TEST 2 - If neuronal trials are more than behavioural
+    # Note that there are other keys except the above four, so data trials may be more than those for the four keys
+    behIndices = [idx for key in behKeys for idx in behavToArray(behavior[key])]
+    assert len(behIndices) <= dataNTrials, "After cropping behavioural trials may not exceed data trials"
+    
+    # CONSISTENCY TEST 3 - Test behavioural indices for duplicates
+    for idx in behIndices:
+        thisCount = behIndices.count(idx)
+        if thisCount != 1:
+            keysRep = {key : list(behavToArray(behavior[key])).count(idx) for key in behKeys if idx in behavToArray(behavior[key])}
+            print("--WARNING: index", idx, "appears multiple times:", keysRep)
+            
+        #assert behIndices.count(idx) == 1, "Found duplicates in behaviour indices"
     
     return data, behavior, performance
 

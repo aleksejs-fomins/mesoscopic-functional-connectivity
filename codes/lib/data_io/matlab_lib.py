@@ -28,7 +28,7 @@ def loadmat(filename, waitRetry=None):
             raise ValueError("Matlab file can not be accessed", filename)
         else:
             while not fileAccessible:
-                print("... can't reach file, waiting", waitRetry, "seconds")
+                print("... can't reach file", filename, ", waiting", waitRetry, "seconds")
                 time.sleep(waitRetry)
                 fileAccessible = os.path.isfile(filename)
 
