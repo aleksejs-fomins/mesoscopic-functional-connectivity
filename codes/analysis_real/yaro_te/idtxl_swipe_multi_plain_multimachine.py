@@ -6,6 +6,7 @@
 import json
 import h5py
 import copy
+import pathos
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -31,6 +32,8 @@ from qt_wrapper import gui_fpath, gui_fname
 ##############################
 #  Constants
 ##############################
+#NCore = pathos.multiprocessing.cpu_count()
+NCore = int(sys.argv[1])
 
 params = {
     "exp_timestep" : 0.05, # 50ms, the standard measurement interval
@@ -61,21 +64,19 @@ idtxl_settings = {
 ##############################
 #  Paths
 ##############################
-json_fname = gui_fname("Path to json file", "./", "JSON files (*.json)")
+in_path = "/home/cluster/alfomi/work/mesoscopic-functional-connectivity/codes/analysis_real/yaro_te/"
+out_path = "/scratch/alfomi/idtxl_results/"
+json_fname = in_path + "foldersMachine" + str(sys.argv[2]) + ".json"
+
 with open(json_fname, 'r') as f:
     datapaths = json.load(f)['dataFolders']
-
-out_path  = gui_fpath("Path where to save results", "./"")
-
 
 ##############################
 #  Processing
 ##############################
 
-for iFile, (folderName, folderPathName) in enumerate(datapaths.items()):
-    
-    if iFile > 0:
-
+for iFile, folderPathName in enumerate(datapaths):
+        folderName = os.path.basename(folderPathName)
         #############################
         # Reading and downsampling
         #############################
@@ -119,7 +120,7 @@ for iFile, (folderName, folderPathName) in enumerate(datapaths.items()):
                 dataEff = data
                 fileNameSuffix = ""
             else:
-                dataEff = data[behaviour[trialType] - 1]
+                dataEff = data[np.array(behaviour[trialType], dtype=int) - 1]
                 fileNameSuffix = "_" + trialType
                 print("For trialType =", trialType, "the shape is (nTrials, nTimes, nChannels)=", dataEff.shape)
 
@@ -132,7 +133,7 @@ for iFile, (folderName, folderPathName) in enumerate(datapaths.items()):
 
             data_range = list(range(nTimes - teWindow + 1))
             data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
-            rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName)
+            rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, NCore=NCore)
 
             print(data_range)
 
