@@ -134,7 +134,7 @@ for iFile, folderPathName in enumerate(datapaths):
         #############################
         
         if dataEff.shape[0] < 50:
-            print("Number of trials", data_lst.shape, "below threshold, skipping analysis")
+            print("Number of trials", dataEff.shape[0], "below threshold, skipping analysis")
         else:
             teWindow = idtxl_settings["max_lag_sources"] + 1
 
