@@ -1,6 +1,7 @@
 import sys
 import bisect
 
+
 # Print progress bar with percentage
 def progress_bar(i, imax, suffix=None):
     sys.stdout.write('\r')
@@ -11,12 +12,11 @@ def progress_bar(i, imax, suffix=None):
         sys.stdout.write("\n")
     sys.stdout.flush()
 
-# Merge 2 dictionaries, given that values of both are lists
+
+# Merge a list of dictionaries with exactly the same key structure
 def merge_dicts(d_lst):
-    d_rez = d_lst[0]
-    for i in range(1, len(d_lst)):
-        d_rez = {k1 : v1 + d_lst[i][k1] for k1, v1 in d_rez.items()}
-    return d_rez
+    return {key : [d[key] for d in d_lst] for key in d_lst[0].keys()}
+
 
 # Compute indices of slice of sorted data which fit into the provided range
 def slice_sorted(data, rng):

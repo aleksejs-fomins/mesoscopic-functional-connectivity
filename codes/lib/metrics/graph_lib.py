@@ -1,13 +1,16 @@
 import numpy as np
 import networkx
 
+
 # Return index of diagonal elements of a square matrix
 def diag_idx(N):
     return np.eye(N, dtype=bool)
 
+
 # Return index of off-diagonal elements of a square matrix
 def offdiag_idx(N):
     return ~np.eye(N, dtype=bool)
+
 
 # Set diagonal to zero
 def offdiag(M):
@@ -15,11 +18,21 @@ def offdiag(M):
     np.fill_diagonal(MZeroDiag, 0)
     return MZeroDiag
 
+
 # Set diagonal to zero, then normalize
 def offdiag_norm(M):
     MZeroDiag = offdiag(M)
     Mmax = np.max(np.abs(MZeroDiag))
     return MZeroDiag if Mmax == 0 else MZeroDiag / Mmax
+
+
+# Construct a matrix where some upper off-diagonal is filled with ones
+def setDiagU(n, sh):
+    M = np.zeros((n, n))
+    for i in range(n-sh):
+        M[i + sh, i] = 1
+    return M
+
 
 # Given a p-value matrix and a threshold, determine which links are below threshold
 # Any np.nan instances are considered above threshold
@@ -27,6 +40,7 @@ def is_conn(p, pTHR):
     pTMP = np.copy(p)
     pTMP[np.isnan(p)] = 100  # Set p-value of NAN connections to infinity to exclude them
     return pTMP < pTHR      # Only include connections that are likely (low p-value)
+
 
 # Compute ratio of average off-diagonal to average diagonal elements
 def diagonal_dominance(M):
@@ -43,25 +57,31 @@ def diagonal_dominance(M):
     
     return diagDomMu, diagDomStd
 
+
 # IN-DEGREE: Number of incoming connections. In weighted version sum of incoming weights
 def degree_in(M):
     return np.sum(offdiag_norm(M), axis=0)
+
 
 # OUT-DEGREE: Number of outcoming connections. In weighted version sum of outcoming weights
 def degree_out(M):
     return np.sum(offdiag_norm(M), axis=1)
 
+
 # TOTAL-DEGREE: Number of connections per node. In weighted version sum of connected weights
 def degree_tot(M):
     return degree_in(M) + degree_out(M)
+
 
 # RECIPROCAL-DEGREE: Number of bidirectional connections. In weighted version sum of geometric averages of both weights
 def degree_rec(M):
     Mnrm = offdiag_norm(M)
     return np.sum(np.sqrt(Mnrm*Mnrm.T), axis=0)
 
+
 def avg_geom(v):
     return np.prod(v) ** (1 / len(v))
+
 
 # https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.cluster.clustering.html
 def cl_coeff(M, kind='tot', normDegree=True):
