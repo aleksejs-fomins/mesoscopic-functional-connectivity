@@ -28,16 +28,18 @@ def dynsys_zealous(param):
     return dynsys(param_tmp)[:, zealous_factor:]
 
 
-def get_param_pure_noise(nNode, nData, dt):
+def get_param_pure_noise(nTrial, nNode, nData, dt):
     return  {
+        'nTrial'      : nTrial,         # Number of trials
         'nNode'       : nNode,          # Number of channels
         'tTot'        : nData*dt,       # seconds, Total simulation time
         'dt'          : dt,             # seconds, Binned optical recording resolution
         'std'         : 1               # Standard deviation of random data
     }
 
-def get_param_lpf_sub(nNode, nData, dt):
+def get_param_lpf_sub(nTrial, nNode, nData, dt):
     return {
+        'nTrial'      : nTrial,  # Number of trials
         'nNode'       : nNode,         # Number of channels
         'tTot'        : nData*dt,      # seconds, Total simulation time
         'tauConv'     : 0.5,           # seconds, Ca indicator decay constant
@@ -46,8 +48,9 @@ def get_param_lpf_sub(nNode, nData, dt):
         'std'         : 1              # Standard deviation of random data
     }
 
-def get_param_dyn_sys(nNode, nData, dt):
+def get_param_dyn_sys(nTrial, nNode, nData, dt):
     return {
+        'nTrial'  : nTrial,  # Number of trials
         'dt'      : dt,      # seconds, Binned optical recording resolution
         'tau'     : 0.2,     # seconds, Neuronal population timescale
         'nNode'   : nNode,   # Number of variables
@@ -101,11 +104,11 @@ def processTask(task):
 
     testType, outpath, nNode, nData, nTrial, dt, modelName = task
     trueConn = modelTrueConnDict[modelName](nNode)
-    paramThis = modelParamFuncDict[modelName](nNode, nData, dt)
+    paramThis = modelParamFuncDict[modelName](nTrial, nNode, nData, dt)
     modelFunc = modelFuncDict[modelName]
 
     # Compute results
-    dataThis = np.array([modelFunc(paramThis) for j in range(nData)]).transpose((0, 2, 1))
+    dataThis = modelFunc(paramThis).transpose((0, 2, 1))
 
     # Save to h5 file
     outname = os.path.join(outpath, testType + "_" + modelName + "_" + str(nTrial) + "_" + str(nNode) + "_" + str(nData) + ".h5" )

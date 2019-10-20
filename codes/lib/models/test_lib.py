@@ -8,44 +8,45 @@ import numpy as np
 # sys.path.append(pwd_lib)
 
 # Load user libraries
-from codes.lib.signal_lib import approxDelayConv, resample
+from codes.lib.signal_lib import approxDelayConv, resample_kernel
 from codes.lib.metrics.graph_lib import setDiagU
 
 
 # Generate pure noise data
 def noisePure(p):
-    NT    = int(p['tTot'] / p['dt'])
-    shape = (p['nNode'], NT)
-    return np.random.normal(0, p['std'], np.prod(shape)).reshape(shape)
+    nT = int(p['tTot'] / p['dt'])
+    return np.random.normal(0, p['std'], (p['nTrial'], p['nNode'], nT))
 
 
 # Generate LPF of noise data, possibly downsampled
 def noiseLPF(p):
-    T_SHIFT  = p['tauConv'] * 10    # seconds, Initial shift to avoid accumulation effects
-    NT_SHIFT = int(T_SHIFT / p['dtMicro']) + 1
-    NT_MICRO = int(p['tTot'] / p['dtMicro']) + 1
+    tShift  = p['tauConv'] * 10    # seconds, Initial shift to avoid accumulation effects
+    nTShift = int(tShift / p['dtMicro']) + 1
+    nTMicro = int(p['tTot'] / p['dtMicro']) + 1
     
     if 'dt' in p.keys():
-        NT = int(p['tTot'] / p['dt']) + 1
-        t_arr_micro = np.linspace(0, p['tTot'], NT_MICRO)
-        t_arr       = np.linspace(0, p['tTot'], NT)
+        nT = int(p['tTot'] / p['dt']) + 1
+        tArrMicro = np.linspace(0, p['tTot'], nTMicro)
+        tArr       = np.linspace(0, p['tTot'], nT)
+        downsampleKernel = resample_kernel(tArrMicro, tArr, (p['dt']/2)**2)
         
-    src_data = [[] for i in range(p['nNode'])]
+    srcData = np.zeros((p['nTrial'], p['nNode'], nT))
 
     # Micro-simulation:
     # 1) Generate random data at neuronal timescale
     # 2) Compute convolution with Ca indicator
     # 3) Downsample to experimental time-resolution, if requested
-    for iChannel in range(p['nNode']):
-        data_rand = np.random.uniform(0, p['std'], NT_MICRO + NT_SHIFT)
-        data_conv = approxDelayConv(data_rand, p['tauConv'], p['dtMicro'])
-        src_data[iChannel] = data_conv[NT_SHIFT:]
-        
-        if 'dt' in p.keys():
-            param_downsample = {'method' : 'averaging', 'kind' : 'kernel'}
-            src_data[iChannel] = resample(t_arr_micro, src_data[iChannel], t_arr, param_downsample)
-        
-    return np.array(src_data)
+    for iTrial in range(p['nTrial']):
+        for iNode in range(p['nNode']):
+            dataRand = np.random.uniform(0, p['std'], nTMicro + nTShift)
+            dataConv = approxDelayConv(dataRand, p['tauConv'], p['dtMicro'])
+
+            if 'dt' in p.keys():
+                srcData[iTrial, iNode] = downsampleKernel.dot(dataConv[nTShift:])
+            else:
+                srcData[iTrial, iNode] = dataConv[nTShift:]
+
+    return np.array(srcData)
 
 
 # Creates a network of consecutively-connected linear first order ODE's
@@ -60,11 +61,12 @@ def dynsys(param):
     # Interactions
     M += eta * setDiagU(param['nNode'], 1)
 
-    data = np.zeros((param['nNode'], param['nData']))
-    for i in range(1, param['nData']):
-        data[:, i] = M.dot(data[:, i-1])
-        data[0, i] += param['mag'] * np.sin(2 * np.pi * i / param['inpT'])    # Input to the first node
-        data[:, i] += np.random.normal(0, param['std'], param['nNode'])       # Noise to all nodes
+    data = np.zeros((param['nTrial'], param['nNode'], param['nData']))
+    for iTrial in range(param['nTrial']):
+        for i in range(1, param['nData']):
+            data[iTrial, :, i] = M.dot(data[iTrial, :, i-1])
+            data[iTrial, 0, i] += param['mag'] * np.sin(2 * np.pi * i / param['inpT'])    # Input to the first node
+            data[iTrial, :, i] += np.random.normal(0, param['std'], param['nNode'])       # Noise to all nodes
 
     return data
 
