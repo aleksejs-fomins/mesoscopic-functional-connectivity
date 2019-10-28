@@ -76,8 +76,8 @@ modelParamFuncDict = {
 
 # True connectivity matrices
 modelTrueConnDict = {
-    "purenoise"   : lambda n : np.full((n, n), np.nan),
-    "lpfsubnoise" : lambda n : np.full((n, n), np.nan),
+    "purenoise"   : lambda p : np.full((p['nNode'], p['nNode']), np.nan),
+    "lpfsubnoise" : lambda p : np.full((p['nNode'], p['nNode']), np.nan),
     "dynsys"      : dynsys_gettrueconn
 }
 
@@ -91,8 +91,8 @@ def processTask(task):
     print("--Doing task", task)
 
     testType, outpath, nNode, nData, nTrial, dt, modelName = task
-    trueConn = modelTrueConnDict[modelName](nNode)
     paramThis = modelParamFuncDict[modelName](nTrial, nNode, nData, dt)
+    trueConn = modelTrueConnDict[modelName](paramThis)
     modelFunc = modelFuncDict[modelName]
 
     # Compute results
@@ -124,7 +124,7 @@ taskList = []
 
 # Generate task list
 for nDataRow in nDataLst:
-    for modelName in modelFuncDict.keys():
+    for modelName in modelFuncDict.keys(): 
         # Width analysis
         nData = nDataRow * tStep
         nTrial = 1
@@ -137,5 +137,6 @@ for nDataRow in nDataLst:
 
 # Compute all tasks in parallel
 nCore = pathos.multiprocessing.cpu_count() - 1
+print("Using nCores", nCore)
 pool = pathos.multiprocessing.ProcessingPool(nCore)
 rez_multilst = pool.map(processTask, taskList)

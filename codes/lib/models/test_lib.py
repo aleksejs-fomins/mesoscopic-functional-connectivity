@@ -65,7 +65,7 @@ def dynsys(param):
     for iTrial in range(param['nTrial']):
         for i in range(1, param['nData']):
             data[iTrial, :, i] = M.dot(data[iTrial, :, i-1])
-            data[iTrial, 0, i] += param['mag'] * np.sin(2 * np.pi * i / param['inpT'])    # Input to the first node
+            data[iTrial, 0, i] += param['inpMag'] * np.sin(2 * np.pi * i / param['inpT'])    # Input to the first node
             data[iTrial, :, i] += np.random.normal(0, param['std'], param['nNode'])       # Noise to all nodes
 
     return data
