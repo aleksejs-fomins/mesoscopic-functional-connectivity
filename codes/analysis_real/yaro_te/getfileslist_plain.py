@@ -29,19 +29,10 @@ print("Total Folders Found", len(allFolders))
 
 
 # Exclude some data that is already done or bad
-excl_folders = [
- 'mvg_7_2018_11_09_a',
- 'mvg_7_2018_11_12_a',
- 'mvg_7_2018_11_13_a',
- 'mvg_7_2018_11_14_a',
- 'mvg_7_2018_11_15_a',
- 'mvg_7_2018_11_17_a',
- 'mvg_7_2018_11_18_a',
- 'mvg_7_2018_11_20_a',
- 'mvg_7_2018_11_23_a',
- 'mvg_7_2018_11_26_a',
- 'mvg_7_2018_12_04_a',
- 'mvg_7_2018_12_05_a']
+excl_folders=[]
+#with open('excl_folders.json', 'r') as f:
+#    excl_folders = json.load(f)['excl_folders']
+
 
 allFoldersFiltered = []
 for folder in allFolders:

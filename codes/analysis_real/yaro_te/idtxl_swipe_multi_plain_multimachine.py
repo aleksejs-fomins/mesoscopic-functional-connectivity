@@ -55,7 +55,8 @@ idtxl_settings = {
     'dim_order'       : 'rsp',
 #    'methods'         : ["BivariateMI", "MultivariateMI"],
     'methods'          : ["BivariateTE", "MultivariateTE"],
-    'cmi_estimator'   : 'JidtGaussianCMI',
+#    'cmi_estimator'   : 'JidtGaussianCMI',
+    'cmi_estimator'   : 'JidtKraskovCMI',
     'min_lag_sources' : 1,
     'max_lag_sources' : 3
 }
@@ -65,7 +66,7 @@ idtxl_settings = {
 #  Paths
 ##############################
 in_path = "/home/cluster/alfomi/work/mesoscopic-functional-connectivity/codes/analysis_real/yaro_te/"
-out_path = "/scratch/alfomi/idtxl_results/"
+out_path = "/scratch/alfomi/idtxl_results_kraskov/"
 json_fname = in_path + "foldersMachine" + str(sys.argv[2]) + ".json"
 
 with open(json_fname, 'r') as f:
