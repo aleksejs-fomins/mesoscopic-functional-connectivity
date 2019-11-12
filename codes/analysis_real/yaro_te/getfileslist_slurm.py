@@ -13,7 +13,8 @@ import numpy as np
 # Append base directory
 currentdir = os.path.dirname(os.path.abspath(__file__))
 path1p = os.path.dirname(currentdir)
-rootdir = os.path.dirname(path1p)
+path2p = os.path.dirname(path1p)
+rootdir = os.path.dirname(path2p)
 
 sys.path.insert(0, rootdir)
 print("Appended root directory", rootdir)
@@ -56,9 +57,9 @@ for fpath in allFolders:
     nChannlel = 48 if "mvg_48" in fpath else 12
 
     for iTrg in range(nChannlel):
-        taskIdx2task += [(iTrg, fpath)]
+        taskIdx2task += [(fpath, iTrg)]
 
 outfname = 'slurmtasks.json'
 print("Writing", len(taskIdx2task), "tasks to", outfname)
 with open(outfname, 'w') as f:
-    json.dump(taskIdx2task, f)
+    json.dump(taskIdx2task, f, indent=4, sort_keys=True)
