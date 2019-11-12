@@ -150,7 +150,7 @@ for trialType in params['trial_types']:
             #######################
             # Save results to file
             #######################
-            savename = os.path.join(out_path, folderName + fileNameSuffix + '_' + methodName + '_swipe_target_' + iTarget + '.h5')
+            savename = os.path.join(out_path, folderName + fileNameSuffix + '_' + methodName + '_swipe_target_' + str(iTarget) + '.h5')
             print("writing file to", savename)
 
             h5f = h5py.File(savename, "w")
