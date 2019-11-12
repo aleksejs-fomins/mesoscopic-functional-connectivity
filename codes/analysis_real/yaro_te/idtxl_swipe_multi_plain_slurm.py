@@ -72,7 +72,7 @@ thisTaskIdx = int(sys.argv[1])
 with open(json_fname, 'r') as f:
     tasks = json.load(f)
 
-iTarget, folderPathName = tasks[thisTaskIdx]
+folderPathName, iTarget = tasks[thisTaskIdx]
 
 
 #############################
@@ -143,7 +143,7 @@ for trialType in params['trial_types']:
         rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, serial=True, target=iTarget)  # {method : [nRange, 3, nNodeSrc, nNodeTrg] }
 
         for methodName, methodRez in rez.items():
-            te_data = np.full((3, nChannels, nChannels, nTimes), np.nan)
+            te_data = np.full((3, nChannels, 1, nTimes), np.nan)
             te_data[..., idtxl_settings["max_lag_sources"]:] = methodRez.transpose((1,2,3,0))
 
             #######################
