@@ -141,18 +141,17 @@ for trialType in params['trial_types']:
 
         data_range = list(range(nTimes - teWindow + 1))
         data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
-        #rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, serial=True, target=iTarget)  # {method : [nRange, 3, nNodeSrc, nNodeTrg] }
-        rez = {"some_te" : 0}
+        rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, serial=True, target=iTarget)  # {method : [nRange, 3, nNodeSrc, nNodeTrg] }
 
         for methodName, methodRez in rez.items():
             te_data = np.full((3, nChannels, 1, nTimes), np.nan)
-            #te_data[..., idtxl_settings["max_lag_sources"]:] = methodRez.transpose((1,2,3,0))
+            te_data[..., idtxl_settings["max_lag_sources"]:] = methodRez.transpose((1,2,3,0))
 
             #######################
             # Save results to file
             #######################
             savename = os.path.join(out_path, folderName + fileNameSuffix + '_' + methodName + '_swipe_target_' + iTarget + '.h5')
-            print(savename)
+            print("writing file to", savename)
 
             h5f = h5py.File(savename, "w")
 
