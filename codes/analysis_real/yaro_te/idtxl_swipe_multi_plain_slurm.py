@@ -142,6 +142,7 @@ for trialType in params['trial_types']:
         data_range = list(range(nTimes - teWindow + 1))
         data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
         #rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, serial=True, target=iTarget)  # {method : [nRange, 3, nNodeSrc, nNodeTrg] }
+        rez = {"some_te" : 0}
 
         for methodName, methodRez in rez.items():
             te_data = np.full((3, nChannels, 1, nTimes), np.nan)
