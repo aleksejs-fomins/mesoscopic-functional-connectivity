@@ -153,7 +153,7 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
     ###############################
     procIdRoot = multiprocessing.current_process().pid
     if serial:
-        myMap = map
+        myMap = lambda f, x: list(map(f, x))
     else:
         if NCore is None:
             NCore = pathos.multiprocessing.cpu_count() - 1
