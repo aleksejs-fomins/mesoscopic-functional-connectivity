@@ -5,28 +5,22 @@
 # Standard libraries
 import json
 import h5py
-import copy
-import pathos
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Append base directory
 import os,sys
 currentdir = os.path.dirname(os.path.abspath(__file__))
 path1p = os.path.dirname(currentdir)
 path2p = os.path.dirname(path1p)
-libpath = os.path.join(path2p, "lib")
+rootpath = os.path.dirname(path2p)
 
-sys.path.insert(0, libpath)
-print("Appended library directory", libpath)
+sys.path.insert(0, rootpath)
+print("Appended root directory", rootpath)
 
 # User libraries
-from data_io.os_lib import getfiles_walk
-from data_io.yaro.yaro_data_read import read_neuro_perf
-from signal_lib import resample
-from fc.te_idtxl_wrapper import idtxlParallelCPUMulti, idtxlResultsParse
-from qt_wrapper import gui_fpath, gui_fname
+from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
+from codes.lib.signal_lib import resample
+from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti
 
 
 ##############################
@@ -51,10 +45,11 @@ params = {
     "resample" : None,
 }
 
+#methods = ["BivariateMI", "MultivariateMI"]
+methods =  ["BivariateTE", "MultivariateTE"]
+
 idtxl_settings = {
     'dim_order'       : 'rsp',
-#    'methods'         : ["BivariateMI", "MultivariateMI"],
-    'methods'          : ["BivariateTE", "MultivariateTE"],
 #    'cmi_estimator'   : 'JidtGaussianCMI',
     'cmi_estimator'   : 'JidtKraskovCMI',
     'min_lag_sources' : 1,
@@ -141,7 +136,7 @@ for iFile, folderPathName in enumerate(datapaths):
 
             data_range = list(range(nTimes - teWindow + 1))
             data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
-            rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, NCore=NCore)  # {method : [nRange, 3, nChannel, nChannel] }
+            rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, methods, NCore=NCore)  # {method : [nRange, 3, nChannel, nChannel] }
 
             for methodName, methodRez in rez.items():
                 te_data = np.full((3, nChannels, nChannels, nTimes), np.nan)
