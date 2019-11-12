@@ -1,8 +1,8 @@
-#import sys
+import os,sys
 #import contextlib
 import numpy as np
 import pandas as pd
-import pathos
+import pathos, multiprocessing
 from time import gmtime, strftime
 
 # IDTxl libraries
@@ -11,8 +11,71 @@ from idtxl.multivariate_mi import MultivariateMI
 from idtxl.bivariate_te import BivariateTE
 from idtxl.multivariate_te import MultivariateTE
 from idtxl.data import Data
-from idtxl.visualise_graph import plot_network
+import jpype as jp
 
+# Append base directory
+currentdir = os.path.dirname(os.path.abspath(__file__))
+path1p = os.path.dirname(currentdir)
+rootdir = os.path.dirname(path1p)
+sys.path.insert(0, rootdir)
+
+from codes.lib.fc.jpype_wrapper import jpype_sync_thread, redirect_stdout
+
+
+# Convert results structure into set of matrices for better usability
+def idtxlResultsParse(results, nNode, nTarget=None, method='TE', storage='matrix'):
+    nNodeSrc = nNode
+    nNodeTrg = nNode if nTarget is None else nTarget
+
+    # Determine metric name to be extracted
+    if 'TE' in method:
+        metricName = 'selected_sources_te'
+    elif 'MI' in method:
+        metricName = 'selected_sources_mi'
+    else:
+        raise ValueError('Unexpected method', method)
+
+    # Initialize target storage class
+    if storage == 'pandas':
+        cols = ['src', 'trg', 'te', 'lag', 'p']
+        df = pd.DataFrame([], columns=cols)
+    else:
+        matTE = np.zeros((nNodeSrc, nNodeTrg)) + np.nan
+        matLag = np.zeros((nNodeSrc, nNodeTrg)) + np.nan
+        matP = np.zeros((nNodeSrc, nNodeTrg)) + np.nan
+
+    # Parse data
+    for iTrg in range(nNodeTrg):
+        if isinstance(results, list):
+            rezThis = results[iTrg].get_single_target(iTrg, fdr=False)
+        else:
+            rezThis = results.get_single_target(iTrg, fdr=False)
+
+        # If any connections were found, get their data  at all was found
+        if rezThis[metricName] is not None:
+            te_lst = rezThis[metricName]
+            p_lst = rezThis['selected_sources_pval']
+            lag_lst = [val[1] for val in rezThis['selected_vars_sources']]
+            src_lst = [val[0] for val in rezThis['selected_vars_sources']]
+            trg_lst = [iTrg] * len(te_lst)
+            rezThisZip = zip(src_lst, trg_lst, te_lst, lag_lst, p_lst)
+
+            if storage == 'pandas':
+                df = df.append(pd.DataFrame(list(rezThisZip), columns=cols), ignore_index=True)
+            else:
+                for iSrc, iTrg, te, lag, p in rezThisZip:
+                    matTE[iSrc][iTrg] = te
+                    matLag[iSrc][iTrg] = lag
+                    matP[iSrc][iTrg] = p
+    if storage == 'pandas':
+        # df = pd.DataFrame.from_dict(out)
+        df = df.sort_values(by=['src', 'trg'])
+        return df
+    else:
+        return matTE, matLag, matP
+
+
+# Construct an IDTxl analysis class using its name
 def getAnalysisClass(methodname):
     # Initialise analysis object
     if   methodname == "BivariateMI":     return BivariateMI()
@@ -22,128 +85,114 @@ def getAnalysisClass(methodname):
     else:
         raise ValueError("Unexpected method", methodname)
 
+
+#@jpype_sync_thread
+@redirect_stdout
+def parallelTask(trg, data, settings):
+    analysisClass = getAnalysisClass(settings['method'])
+    return analysisClass.analyse_single_target(settings=settings, data=data, target=trg)
+
+
+# Parallelize a FC estimate over targets
 def idtxlParallelCPU(data, settings, NCore = None):
     # Get number of processes
     idxProcesses = settings['dim_order'].index("p")
-    NProcesses = data.shape[idxProcesses]
+    nProcesses = data.shape[idxProcesses]
     
     # Convert data to ITDxl format
     dataIDTxl = Data(data, dim_order=settings['dim_order'])
-    
-    # Initialise analysis object
-    analysis_class = getAnalysisClass(settings['method'])
 
     # Initialize multiprocessing pool
     if NCore is None:
         NCore = pathos.multiprocessing.cpu_count() - 1
     pool = pathos.multiprocessing.ProcessingPool(NCore)
     #pool = multiprocessing.Pool(NCore)
-    
-    #with contextlib.redirect_stdout(open('log_out.txt', 'w')):
-    #    with contextlib.redirect_stderr(open('log_err.txt', 'w')):
-    targetLst = list(range(NProcesses))
-    parallelTask = lambda trg: analysis_class.analyse_single_target(settings=settings, data=dataIDTxl, target=trg)
-    rez = pool.map(parallelTask, targetLst)
-    return rez
+
+    targetLst = list(range(nProcesses))
+
+    parallelTaskCompact = lambda trg: parallelTask(trg, dataIDTxl, settings)
+    rez = pool.map(parallelTaskCompact, targetLst)
+
+    return idtxlResultsParse(rez, nProcesses, method=settings['method'], storage='matrix')
 
 
-def idtxlParallelCPUMulti(data_lst, settings, taskName, NCore = None):
+# Parallelize FC estimate over targets, datasets and methods
+def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False, target=None):
     '''
-    Performs parameter sweep over methods, data sets and channels,
-     distributing work equally among available processes
+    Performs parameter sweep over methods, data sets and channels, distributing work equally among available processes
+    * Number of processes (aka channels) must be equal for all datasets
     '''
-    
+
+    ##########################################
     # Determine parameters for the parameter sweep
+    ##########################################
     idxProcesses = settings['dim_order'].index("p")      # Index of Processes dimension in data
-    mIdxs = np.arange(len(settings['methods']))          # Indices of all methods
-    dIdxs = np.arange(len(data_lst))                     # Indices of all data sets
-    pIdxs = np.arange(data_lst[0].shape[idxProcesses])   # Indices of all processes (aka data channels)
-    sweepLst = [(m, d, p) for m in mIdxs for d in dIdxs for p in pIdxs]
+
+    nMethods = len(methods)
+    nDataSets = len(dataLst)
+    nProcesses = dataLst[0].shape[idxProcesses]
+
+    # Indices of all methods
+    # Indices of all data sets
+    # Indices of all target processes (aka data channels)
+    mIdxs = np.arange(nMethods, dtype=int)
+    dIdxs = np.arange(nDataSets, dtype=int)
+    tIds  = np.arange(nProcesses, dtype=int) if target is None else np.array([target])
+    nProcessesEff = len(tIds)
+
+    sweepLst = [(m, d, t) for m in mIdxs for d in dIdxs for t in tIds]
     sweepIdxs = np.arange(len(sweepLst))
-    
+
+    ###############################
     # Convert data to ITDxl format
-    dataIDTxl_lst = [Data(d, dim_order=settings['dim_order']) for d in data_lst]
+    ###############################
+    dataIDTxl_lst = [Data(d, dim_order=settings['dim_order']) for d in dataLst]
 
+    ###############################
     # Initialize multiprocessing pool
-    if NCore is None:
-        NCore = pathos.multiprocessing.cpu_count() - 1
-    pool = pathos.multiprocessing.ProcessingPool(NCore)
-    #pool = multiprocessing.Pool(NCore)
-    
-    # Create log file
-    logName = taskName + '.log'
-    with open(logName, 'w') as f:
-        f.write('-----Started using cores ' + str(NCore) + ' -----------\n')
-        
-#     task = lambda sw: multiParallelTask(sw, settings, dataIDTxl_lst, logName)
+    ###############################
+    procIdRoot = multiprocessing.current_process().pid
+    if serial:
+        myMap = map
+    else:
+        if NCore is None:
+            NCore = pathos.multiprocessing.cpu_count() - 1
+        pool = pathos.multiprocessing.ProcessingPool(NCore)
+        #pool = multiprocessing.Pool(NCore)
+        myMap = pool.map
 
-    def multiParallelTask(sw):
+    ###############################
+    # Compute estimators in parallel
+    ###############################
+    def multiParallelTask(sw, dataIDTxl_lst, methods, settings):
         methodIdx, dataIdx, targetIdx = sw
-        with open(logName, "a+") as f:
-            f.write(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()) + "Started:  "+ str(sw) + '\n')
-        analysis_class = getAnalysisClass(settings['methods'][methodIdx])
-        rez = analysis_class.analyse_single_target(settings=settings, data=dataIDTxl_lst[dataIdx], target=int(targetIdx))
-        with open(logName, "a+") as f:
-            f.write(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()) + "Finished: "+ str(sw) + '\n')
+        settingsThis = settings.copy()
+        settingsThis["method"] = methods[int(methodIdx)]
+
+        procId = multiprocessing.current_process().pid
+        print(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()), "proc", procId, "started task:  ", sw)
+        rez = parallelTask(int(targetIdx), dataIDTxl_lst[dataIdx], settingsThis)
+        print(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()), "proc", procId, "finished task: ", sw)
         return rez
 
-    rez_multilst = pool.map(multiParallelTask, sweepLst)
-    
+
+    print("----Root process", procIdRoot, "started task on", NCore, "cores----")
+
+    multiParallelTaskCompact = lambda sw: multiParallelTask(sw, dataIDTxl_lst, methods, settings)
+    rez_multilst = myMap(multiParallelTaskCompact, sweepLst)
+
+
+    ###############################
+    # Parse computed matrices
+    ###############################
     tripleIdxs = dict(zip(sweepLst, sweepIdxs))
-    rez = [[[rez_multilst[tripleIdxs[(m, d, p)]] for p in pIdxs] for d in dIdxs] for m in mIdxs]
-    
-    with open(logName, "a+") as f:
-        f.write("-------Done--------")
-    
-    return rez
+    rez = [[[rez_multilst[tripleIdxs[(m, d, t)]] for t in tIds] for d in dIdxs] for m in mIdxs]
 
+    rezParsed = {
+        method : np.array([idtxlResultsParse(rez[m][d], nProcessesEff, method=method, storage='matrix') for d in dIdxs])
+        for m, method in enumerate(settings['methods'])
+    }
 
-
-# Convert results structure into set of matrices for better usability
-def idtxlResultsParse(results, N_NODE, method='TE', storage='matrix'):
-    # Determine metric name to be extracted
-    if 'TE' in method:
-        metric_name = 'selected_sources_te'
-    elif 'MI' in method:
-        metric_name = 'selected_sources_mi'
-    else:
-        raise ValueError('Unexpected method', method)
+    print("----Root process", procIdRoot, "finished task")
     
-    # Initialize target storage class
-    if storage=='pandas':
-        cols = ['src', 'trg', 'te', 'lag', 'p']
-        df = pd.DataFrame([], columns=cols)
-    else:    
-        te_mat = np.zeros((N_NODE, N_NODE)) + np.nan
-        lag_mat = np.zeros((N_NODE, N_NODE)) + np.nan
-        p_mat = np.zeros((N_NODE, N_NODE)) + np.nan
-    
-    # Parse data
-    for iTrg in range(N_NODE):
-        if isinstance(results, list):
-            rezThis = results[iTrg].get_single_target(iTrg, fdr=False)
-        else:
-            rezThis = results.get_single_target(iTrg, fdr=False)
-        
-        # If any connections were found, get their data  at all was found
-        if rezThis[metric_name] is not None:
-            te_lst  = rezThis[metric_name]
-            p_lst   = rezThis['selected_sources_pval']
-            lag_lst = [val[1] for val in rezThis['selected_vars_sources']]
-            src_lst = [val[0] for val in rezThis['selected_vars_sources']]
-            trg_lst = [iTrg] * len(te_lst)
-            rezThisZip = zip(src_lst, trg_lst, te_lst, lag_lst, p_lst)
-            
-            if storage=='pandas':
-                df = df.append(pd.DataFrame(list(rezThisZip), columns=cols), ignore_index=True)
-            else:            
-                for iSrc, iTrg, te, lag, p in rezThisZip:
-                    te_mat[iSrc][iTrg] = te
-                    lag_mat[iSrc][iTrg] = lag
-                    p_mat[iSrc][iTrg] = p
-    if storage=='pandas':
-        #df = pd.DataFrame.from_dict(out)
-        df = df.sort_values(by=['src', 'trg'])
-        return df        
-    else:
-        return te_mat, lag_mat, p_mat
+    return rezParsed

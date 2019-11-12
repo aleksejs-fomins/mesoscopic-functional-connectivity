@@ -44,7 +44,7 @@ print("Total Folders after exclusion", len(allFoldersFiltered))
 
 
 # Step 2: Split files among processes. Files are sorted in priority order, because we need some results sooner than others
-nMachines = 20
+nMachines = int(sys.argv[1])
 foldersPerMachine = {iMachine : [] for iMachine in range(nMachines)}
 
 for iFolder, path in enumerate(allFoldersFiltered):

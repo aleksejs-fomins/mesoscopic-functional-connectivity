@@ -10,6 +10,8 @@ import pathos
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from time import gmtime, strftime
+from pkg_resources import resource_filename
 
 # Append base directory
 import os,sys
@@ -25,8 +27,65 @@ print("Appended library directory", libpath)
 from data_io.os_lib import getfiles_walk
 from data_io.yaro.yaro_data_read import read_neuro_perf
 from signal_lib import resample
-from fc.te_idtxl_wrapper import idtxlParallelCPUMulti, idtxlResultsParse
 from qt_wrapper import gui_fpath, gui_fname
+from idtxl.data import Data
+import jpype as jp
+
+
+def idtxlParallelCPUMulti(dataLst, settings, taskName, NCore=None):
+    '''
+    Performs parameter sweep over methods, data sets and channels, distributing work equally among available processes
+    * Number of processes (aka channels) must be equal for all datasets
+    '''
+
+    ##########################################
+    # Determine parameters for the parameter sweep
+    ##########################################
+    idxProcesses = settings['dim_order'].index("p")  # Index of Processes dimension in data
+
+    nMethods = len(settings['methods'])
+    nDataSets = len(dataLst)
+    nProcesses = dataLst[0].shape[idxProcesses]
+
+    mIdxs = np.arange(nMethods)  # Indices of all methods
+    dIdxs = np.arange(nDataSets)  # Indices of all data sets
+    pIdxs = np.arange(nProcesses)  # Indices of all processes (aka data channels)
+
+    sweepLst = [(m, d, p) for m in mIdxs for d in dIdxs for p in pIdxs]
+    sweepIdxs = np.arange(len(sweepLst))
+
+    ###############################
+    # Convert data to ITDxl format
+    ###############################
+    dataIDTxl_lst = [Data(d, dim_order=settings['dim_order']) for d in dataLst]
+
+    ###############################
+    # Initialize multiprocessing pool
+    ###############################
+    if NCore is None:
+        NCore = pathos.multiprocessing.cpu_count() - 1
+    pool = pathos.multiprocessing.ProcessingPool(NCore)
+    # pool = multiprocessing.Pool(NCore)
+
+    ###############################
+    # Compute estimators in parallel
+    ###############################
+    def multiParallelTask(sw):
+        #print(sw)
+
+        """Start JAVA virtual machine if it is not running."""
+        jar_location = resource_filename(__name__, 'infodynamics.jar')
+        with open("yololog.txt", "a+") as f:
+            if not jp.isJVMStarted():
+                jp.startJVM(jp.getDefaultJVMPath(), '-ea', ('-Djava.class.path=' + jar_location))
+                f.write(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()) + "Started new JVM\n")
+            else:
+                f.write(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()) + "JVM already exists\n")
+
+        return [1]
+
+    return pool.map(multiParallelTask, sweepLst)
+
 
 
 ##############################
@@ -65,8 +124,10 @@ idtxl_settings = {
 ##############################
 #  Paths
 ##############################
-in_path = "/home/cluster/alfomi/work/mesoscopic-functional-connectivity/codes/analysis_real/yaro_te/"
-out_path = "/scratch/alfomi/idtxl_results_kraskov/"
+#in_path = "/home/cluster/alfomi/work/mesoscopic-functional-connectivity/codes/analysis_real/yaro_te/"
+#out_path = "/scratch/alfomi/idtxl_results_kraskov/"
+in_path = "./"
+out_path = "../../tmp"
 json_fname = in_path + "foldersMachine" + str(sys.argv[2]) + ".json"
 
 with open(json_fname, 'r') as f:
@@ -141,23 +202,27 @@ for iFile, folderPathName in enumerate(datapaths):
 
             data_range = list(range(nTimes - teWindow + 1))
             data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
-            rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, NCore=NCore)  # {method : [nRange, 3, nChannel, nChannel] }
+            rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName, NCore=NCore)
 
-            for methodName, methodRez in rez.items():
-                te_data = np.full((3, nChannels, nChannels, nTimes), np.nan)
-                te_data[..., idtxl_settings["max_lag_sources"]:] = methodRez.transpose((1,2,3,0))
-
-                #######################
-                # Save results to file
-                #######################
-                savename = os.path.join(out_path, folderName + fileNameSuffix + '_' + methodName + '_swipe' + '.h5')
-                print(savename)
-
-                h5f = h5py.File(savename, "w")
-
-                grp_rez = h5f.create_group("results")
-                grp_rez['TE_table']    = te_data[0]
-                grp_rez['delay_table'] = te_data[1]
-                grp_rez['p_table']     = te_data[2]
-
-                h5f.close()
+            # for iMethod, method in enumerate(idtxl_settings['methods']):
+            #     te_data = np.full((3, nChannels, nChannels, nTimes), np.nan)
+            #
+            #     # for iRange in data_range:
+            #     #     te_data[..., iRange + idtxl_settings["max_lag_sources"]] = np.array(
+            #     #         idtxlResultsParse(rez[iMethod][iRange], nChannels, method=method, storage='matrix')
+            #     #     )
+            #
+            #     #######################
+            #     # Save results to file
+            #     #######################
+            #     savename = os.path.join(out_path, folderName + fileNameSuffix + '_' + method + '_swipe' + '.h5')
+            #     print(savename)
+            #
+            #     h5f = h5py.File(savename, "w")
+            #
+            #     grp_rez = h5f.create_group("results")
+            #     grp_rez['TE_table']    = te_data[0]
+            #     grp_rez['delay_table'] = te_data[1]
+            #     grp_rez['p_table']     = te_data[2]
+            #
+            #     h5f.close()

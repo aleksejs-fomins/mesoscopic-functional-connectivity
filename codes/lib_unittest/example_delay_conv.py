@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 # Export library path
 thispath   = dirname(abspath(__file__))
 parentpath = dirname(thispath)
-libpath    = join(parentpath, 'lib')
-sys.path.append(libpath)
+rootpath = dirname(parentpath)
+sys.path.append(rootpath)
 
 # import special libraries
-from signal_lib import approxDelayConv
+from codes.lib.signal_lib import approxDelayConv
 
 # Create signal
 DT =  0.001   # s

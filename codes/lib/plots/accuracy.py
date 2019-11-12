@@ -1,3 +1,4 @@
+import os
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,34 +9,43 @@ from codes.lib.metrics.accuracy import accuracyTests
 
 
 # Create test plots from previously saved file
-def testplots_fromfile(h5_fname, logx=True, percenty=False, pTHR=None, fig_fname=None):
+def fc_plots_fromfile(h5_fname, methods, logx=True, percenty=False, pTHR=None, fig_fname=None):
     with h5py.File(h5_fname, "r") as h5f:
-        xparam = np.array(h5f['results']['xparam'])
-        connTrue = np.array(h5f['results']['connTrue'])
-        fcData = [
-            np.array(h5f['results']['TE_table']),
-            np.array(h5f['results']['delay_table']),
-            np.array(h5f['results']['p_table'])
-        ]
+        xparam = np.array(h5f['metadata']['xparam'])
+        connTrue = np.array(h5f['metadata']['connTrue'])
 
-    testplots(xparam, fcData, connTrue, logx=logx, percenty=percenty, pTHR=pTHR, h5_fname=None, fig_fname=fig_fname)
+        for method in methods:
+            if method in h5f:
+                fcData = [
+                    np.array(h5f[method]['TE_table']),
+                    np.array(h5f[method]['delay_table']),
+                    np.array(h5f[method]['p_table'])]
+
+                fc_plots(xparam, fcData, connTrue, method, logx=logx, percenty=percenty, pTHR=pTHR, h5_fname=None, fig_fname=fig_fname)
 
 
 # Create test plots directily from data, maybe saving to h5
-def testplots(xparam, fcData, connTrue, logx=True, percenty=False, pTHR=None, h5_fname=None, fig_fname=None):
+def fc_plots(xparam, fcData, connTrue, method, logx=True, percenty=False, pTHR=None, h5_fname=None, fig_fname=None):
     te3D, lag3D, p3D = fcData
 
     #####################################
     # Save data
     #####################################
     if h5_fname is not None:
-        with h5py.File(h5_fname, "w") as h5f:
-            grp_rez = h5f.create_group("results")
-            grp_rez['xparam'] = xparam
-            grp_rez['connTrue'] = connTrue
-            grp_rez['TE_table'] = te3D
-            grp_rez['delay_table'] = lag3D
-            grp_rez['p_table'] = p3D
+        filemode = "a" if os.path.isfile(h5_fname) else "w"
+        with h5py.File(h5_fname, filemode) as h5f:
+            if "metadata" not in h5py:
+                grp_rez = h5f.create_group("metadata")
+                grp_rez['xparam'] = xparam
+                grp_rez['connTrue'] = connTrue
+
+            if method in h5py:
+                raise ValueError("Already have data for method", method)
+
+            grp_method = h5f.create_group(method)
+            grp_method['TE_table'] = te3D
+            grp_method['delay_table'] = lag3D
+            grp_method['p_table'] = p3D
 
     #####################################
     # Analysis

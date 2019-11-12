@@ -17,11 +17,11 @@ import matplotlib.pyplot as plt
 # Export library path
 thispath   = dirname(abspath(__file__))
 parentpath = dirname(thispath)
-libpath    = join(parentpath, 'lib')
-sys.path.append(libpath)
+rootpath    = join(parentpath, 'lib')
+sys.path.append(rootpath)
 
 # import special libraries
-from signal_lib import resample
+from codes.lib.signal_lib import resample
 
 ##########################
 # Downsampling
@@ -45,6 +45,7 @@ y5 = resample(t1, y1, t2, {"method" : "smooth", "kind" : "kernel", "ker_sig2" : 
 
 # Plot
 plt.figure()
+plt.title('Downsampling using window and kernel estimators')
 plt.plot(t1, y1, '.-', label='orig')
 plt.plot(t2, y2, '.-', label='window')
 plt.plot(t2, y3, '.-', label="ker, s2=d2^2")
@@ -71,6 +72,7 @@ y4 = resample(t1, y1, t2, {"method" : "interpolative", "kind" : "cubic"})
 
 # Plot
 plt.figure()
+plt.title('Upsampling using interpolation')
 plt.plot(t1, y1, 'o', label='orig')
 plt.plot(t2, y2, '.-', label='linear')
 plt.plot(t2, y3, '.-', label="quadratic")
