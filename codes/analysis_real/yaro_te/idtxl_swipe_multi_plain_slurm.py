@@ -18,11 +18,13 @@ sys.path.insert(0, rootpath)
 print("Appended root directory", rootpath)
 
 # User libraries
+from codes.lib.aux_functions import memNowAsStr
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
 from codes.lib.signal_lib import resample
 from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti
 
 
+print("Mem:", memNowAsStr(), "- Start of code")
 
 ##############################
 #  Constants
@@ -81,6 +83,8 @@ folderName = os.path.basename(folderPathName)
 
 # Read LVM file from command line
 data, behaviour, performance = read_neuro_perf(folderPathName)
+
+print("Mem:", memNowAsStr(), "- Loaded data")
 
 # Get parameters
 nTrials, nTimes, nChannels = data.shape

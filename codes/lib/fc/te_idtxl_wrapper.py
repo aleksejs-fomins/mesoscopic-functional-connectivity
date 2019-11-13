@@ -18,6 +18,7 @@ path1p = os.path.dirname(currentdir)
 rootdir = os.path.dirname(path1p)
 sys.path.insert(0, rootdir)
 
+from codes.lib.aux_functions import memNowAsStr
 from codes.lib.fc.jpype_wrapper import redirect_stdout, time_mem_1starg#, jpype_sync_thread
 
 
@@ -122,6 +123,8 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
     * Number of processes (aka channels) must be equal for all datasets
     '''
 
+    print("Mem:", memNowAsStr(), "- Start of subroutine")
+
     ##########################################
     # Determine parameters for the parameter sweep
     ##########################################
@@ -146,6 +149,8 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
     # Convert data to ITDxl format
     ###############################
     dataIDTxl_lst = [Data(d, dim_order=settings['dim_order']) for d in dataLst]
+
+    print("Mem:", memNowAsStr(), "- Converted all data to IDTxl format")
 
     ###############################
     # Initialize multiprocessing pool
