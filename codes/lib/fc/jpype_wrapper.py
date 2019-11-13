@@ -1,7 +1,8 @@
 import multiprocessing
 import jpype as jp
 import sys
-from time import gmtime, strftime
+
+from codes.lib.aux_functions import timeNowAsStr, memNowAsStr
 
 
 # def parallelJVMShutdown(i):
@@ -67,3 +68,16 @@ def redirect_stdout(func):
 
     return inner
 
+
+# Print time, memory usage, process id and first argument before and after the function
+def time_mem_1starg(func):
+    def inner(*args, **kwargs):
+        procId = multiprocessing.current_process().pid
+        print(timeNowAsStr(), "proc:", procId, "mem:", memNowAsStr(), "arg:", args[0], "started")
+
+        rez = func(*args, **kwargs)
+
+        print(timeNowAsStr(), "proc:", procId, "mem:", memNowAsStr(), "arg:", args[0], "finished")
+        return rez
+
+    return inner

@@ -3,7 +3,6 @@ import os,sys
 import numpy as np
 import pandas as pd
 import pathos, multiprocessing
-from time import gmtime, strftime
 
 # IDTxl libraries
 from idtxl.bivariate_mi import BivariateMI
@@ -11,7 +10,7 @@ from idtxl.multivariate_mi import MultivariateMI
 from idtxl.bivariate_te import BivariateTE
 from idtxl.multivariate_te import MultivariateTE
 from idtxl.data import Data
-import jpype as jp
+#import jpype as jp
 
 # Append base directory
 currentdir = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +18,7 @@ path1p = os.path.dirname(currentdir)
 rootdir = os.path.dirname(path1p)
 sys.path.insert(0, rootdir)
 
-from codes.lib.fc.jpype_wrapper import jpype_sync_thread, redirect_stdout
+from codes.lib.fc.jpype_wrapper import redirect_stdout, time_mem_1starg#, jpype_sync_thread
 
 
 # Convert results structure into set of matrices for better usability
@@ -164,16 +163,13 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
     ###############################
     # Compute estimators in parallel
     ###############################
+    @time_mem_1starg
     def multiParallelTask(sw, dataIDTxl_lst, methods, settings):
         methodIdx, dataIdx, targetIdx = sw
         settingsThis = settings.copy()
         settingsThis["method"] = methods[int(methodIdx)]
 
-        procId = multiprocessing.current_process().pid
-        print(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()), "proc", procId, "started task:  ", sw)
-        rez = parallelTask(int(targetIdx), dataIDTxl_lst[dataIdx], settingsThis)
-        print(strftime("[%Y.%m.%d %H:%M:%S]", gmtime()), "proc", procId, "finished task: ", sw)
-        return rez
+        return parallelTask(int(targetIdx), dataIDTxl_lst[dataIdx], settingsThis)
 
 
     print("----Root process", procIdRoot, "started task on", NCore, "cores----")

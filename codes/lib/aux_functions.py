@@ -1,5 +1,16 @@
 import sys
+from time import gmtime, strftime
 import bisect
+import psutil
+
+# Get current time as string
+def timeNowAsStr():
+    return strftime("[%Y.%m.%d %H:%M:%S]", gmtime())
+
+
+# Get current memory use as string
+def memNowAsStr():
+    return str(psutil.virtual_memory().used)
 
 
 # Print progress bar with percentage
