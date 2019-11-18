@@ -23,6 +23,7 @@ from codes.lib.fc.jpype_wrapper import redirect_stdout, time_mem_1starg#, jpype_
 
 
 # Convert results structure into set of matrices for better usability
+# Returns shape [3 x nSource x nTarget]
 def idtxlResultsParse(results, nNode, nTarget=None, method='TE', storage='matrix'):
     nNodeSrc = nNode
     nNodeTrg = nNode if nTarget is None else nTarget
@@ -117,6 +118,7 @@ def idtxlParallelCPU(data, settings, NCore = None):
 
 
 # Parallelize FC estimate over targets, datasets and methods
+# Returns dict {"method" : array of shape [nData x 3 x nSource x nTarget]}
 def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False, target=None):
     '''
     Performs parameter sweep over methods, data sets and channels, distributing work equally among available processes
@@ -191,8 +193,14 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
 
     rezParsed = {
         method : np.array([idtxlResultsParse(rez[m][d], nProcessesEff, method=method, storage='matrix') for d in dIdxs])
-        for m, method in enumerate(settings['methods'])
+        for m, method in enumerate(methods)
     }
+
+    # rezParsed = {
+    #     method : np.array([[rez_multilst[tripleIdxs[(m, d, t)]] for t in tIds] for d in dIdxs])
+    #     for m, method in enumerate(methods)
+    # }
+
 
     print("----Root process", procIdRoot, "finished task")
     

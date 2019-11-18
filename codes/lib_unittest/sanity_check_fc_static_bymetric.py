@@ -50,8 +50,8 @@ algEstLst = [
     # ("Corr", "corr"),
     # ("Corr", "spr"),
     # ("BMI", "OpenCLKraskovCMI"),
-    # ("BMI", "JidtGaussianCMI"),
-    ("BMI", "JidtKraskovCMI"),
+    ("BMI", "JidtGaussianCMI"),
+    #("BMI", "JidtKraskovCMI"),
 ]
 
 pvalFuncDict = {

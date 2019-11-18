@@ -26,9 +26,20 @@ def offdiag_norm(M):
     return MZeroDiag if Mmax == 0 else MZeroDiag / Mmax
 
 
+# Return flat 1D array of matrix off-diagonal entries
+def offdiag_1D(M):
+    return M[offdiag_idx(M.shape[0])]
+
+
+# Return flat 1D array of matrix off-diagonal entries, but only those which are not NAN
+def offdiag_1D_nonnan(M):
+    MOffDiag = offdiag_1D(M)
+    return MOffDiag[~np.isnan(MOffDiag)]
+
+
 # Construct a matrix where some upper off-diagonal is filled with ones
-def setDiagU(n, sh):
-    M = np.zeros((n, n))
+def setDiagU(n, sh, baseline=0):
+    M = np.full((n, n), baseline)
     for i in range(n-sh):
         M[i + sh, i] = 1
     return M

@@ -1,50 +1,61 @@
 import os
 import h5py
 import numpy as np
+import pandas as pd
 
 from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti, idtxlResultsParse
-from codes.lib.plots.accuracy import fc_plots
+from codes.lib.plots.accuracy import fc_accuracy_plots
 from codes.lib.models.false_negative_transform import makedata_snr_observational, makedata_snr_occurence
 
 
-def analysis_width_depth(dataFileNames, idtxlSettings):
-    for analysis in ["width", "depth"]:
-        analysisFileNames = [fname for fname in dataFileNames if analysis in fname]
-        print("Performing",analysis,"tests on", len(analysisFileNames), "files")
+def analysis_width_depth(dataFileNames, idtxlSettings, methods, pTHR=0.01):
+    baseNames = [os.path.basename(fname) for fname in dataFileNames]
+    fileInfoDf = pd.DataFrame([fname[:-3].split('_') for fname in baseNames],
+                              columns = ['analysis', 'modelname', 'nTrial', 'nNode', 'nTime'])
+    fileInfoDf = fileInfoDf.astype(dtype={'nTrial': 'int', 'nNode': 'int', 'nTime': 'int'})
 
-        for modelName in ["purenoise", "lpfsubnoise", "dynsys"]:
-            modelFileNames = np.sort([fname for fname in analysisFileNames if modelName in fname])
-            print("- For model", modelName, len(modelFileNames), "files")
+    analysisNames = set(fileInfoDf['analysis'])
+    modelNames = set(fileInfoDf['modelname'])
+    nodeNumbers = set(fileInfoDf['nNode'])
 
-            nFile = len(modelFileNames)
-            te_results = { key : np.zeros((3, nNode, nNode, nFile)) for key in idtxlSettings['methods'] }
+    for analysis in analysisNames:
+        for modelName in modelNames:
+            for nNode in nodeNumbers:
+                dfThis = fileInfoDf[
+                    (fileInfoDf['analysis'] == analysis) &
+                    (fileInfoDf['modelname'] == modelName) &
+                    (fileInfoDf['nNode'] == nNode)
+                ]
 
-            nDataEff = []
-            dataLst = []
-            for iFile, fname in enumerate(modelFileNames):
-                print("-- Reading Data File", os.path.basename(fname))
+                print("For analysis", analysis, "model", modelName, "nNode", nNode, "have", len(dfThis), "files")
 
-                # Read file here
-                with h5py.File(fname, "r") as h5f:
-                    modelName = str(h5f['results']['modelName'])
-                    trueConn = np.copy(h5f['results']['connTrue'])
-                    dataLst += [np.copy(h5f['results']['data'])]
-                    nTrial, nTime, nNode = dataLst[-1].shape
-                    nDataEff += [nTrial * nTime]
+                nDataEff = []
+                dataLst = []
+                for index, row in dfThis.iterrows():
+                    fnameThis = dataFileNames[index]
+                    expectedShape = (row["nTrial"], row["nTime"], nNode)
 
+                    # Read file here
+                    with h5py.File(fnameThis, "r") as h5f:
+                        trueConn = np.copy(h5f['results']['connTrue'])
+                        dataLst += [np.copy(h5f['results']['data'])]
+                        nDataEff += [expectedShape[0] * expectedShape[1]]
 
-            # Run calculation
-            rez = idtxlParallelCPUMulti(dataLst, idtxlSettings, analysis+"_"+modelName)
+                        print(fnameThis)
+                        print(expectedShape)
+                        print(dataLst[-1].shape)
 
-            for iMethod, method in enumerate(idtxlSettings['methods']):
-                fname = analysis + "_" + modelName + '_' + str(nNode) + '_' + method
-                teData = np.full((3, nNode, nNode, nFile), np.nan)
+                        assert modelName == str(np.copy(h5f['results']['modelName'])), "Data shape in the file does not correspond filename"
+                        assert dataLst[-1].shape == expectedShape, "Data shape in the file does not correspond filename"
 
-                # Parse Data
-                for iFile in range(nFile):
-                    teData[..., iFile] = np.array(idtxlResultsParse(rez[iMethod][iFile], nNode, method=method, storage='matrix'))
+                # Run calculation
+                rezIDTxl = idtxlParallelCPUMulti(dataLst, idtxlSettings, methods)
 
-                fc_plots(nDataEff, teData, trueConn, method, logx=True, percenty=True, pTHR=0.01, h5_fname=fname + '.h5', fig_fname=fname + '.png')
+                for iMethod, method in enumerate(methods):
+                    fname_h5 = analysis + "_" + modelName + '_' + str(nNode) + '.h5'
+                    fname_svg = fname_h5[:-3] + '_' + method + '.svg'
+                    teData = rezIDTxl[method].transpose((1,2,3,0))
+                    fc_accuracy_plots(nDataEff, teData, trueConn, method, pTHR, logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_svg)
 
 
 def analysis_snr(fname, modelName, idtxlSettings, nStep):
@@ -83,8 +94,8 @@ def analysis_snr(fname, modelName, idtxlSettings, nStep):
                 teData[..., iStep] = np.array(
                     idtxlResultsParse(rez[iMethod][iStep], nNode, method=method, storage='matrix'))
 
-            fc_plots(paramRanges, teData, trueConn, method, logx=True, percenty=True, pTHR=0.01, h5_fname=fname + '.h5',
-                      fig_fname=fname + '.png')
+            fc_accuracy_plots(paramRanges, teData, trueConn, method, logx=True, percenty=True, pTHR=0.01, h5_fname=fname + '.h5',
+                              fig_fname=fname + '.png')
 
 
 def analysis_window(fname, idtxlSettings, windowRange):

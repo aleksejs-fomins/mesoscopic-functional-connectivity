@@ -13,7 +13,7 @@ print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 # User libraries
-from codes.lib.models.test_lib import noisePure, noiseLPF, dynsys, dynsys_gettrueconn
+from codes.lib.models.test_lib import noisePure, noiseLPF, dynsys, dynsys_gettrueconn, steps2interv
 from codes.lib.data_io.qt_wrapper import gui_fpath
 
 #############################
@@ -25,14 +25,14 @@ def dynsys_zealous(param):
     zealous_factor = 10  #seconds
     param_tmp = copy.deepcopy(param)
     param_tmp['nData'] += zealous_factor
-    return dynsys(param_tmp)[:, zealous_factor:]
+    return dynsys(param_tmp)[:, :, zealous_factor:]
 
 
 def get_param_pure_noise(nTrial, nNode, nData, dt):
     return  {
         'nTrial'      : nTrial,         # Number of trials
         'nNode'       : nNode,          # Number of channels
-        'tTot'        : nData*dt,       # seconds, Total simulation time
+        'tTot'        : steps2interv(nData, dt),       # seconds, Total simulation time
         'dt'          : dt,             # seconds, Binned optical recording resolution
         'std'         : 1               # Standard deviation of random data
     }
@@ -41,7 +41,7 @@ def get_param_lpf_sub(nTrial, nNode, nData, dt):
     return {
         'nTrial'      : nTrial,  # Number of trials
         'nNode'       : nNode,         # Number of channels
-        'tTot'        : nData*dt,      # seconds, Total simulation time
+        'tTot'        : steps2interv(nData,dt),      # seconds, Total simulation time
         'tauConv'     : 0.5,           # seconds, Ca indicator decay constant
         'dtMicro'     : 0.001,         # seconds, Neuronal spike timing resolution
         'dt'          : dt,            # seconds, Binned optical recording resolution
@@ -62,8 +62,8 @@ def get_param_dyn_sys(nTrial, nNode, nData, dt):
 
 # Find model function by name
 modelFuncDict = {
-    'purenoise'    : noisePure,
-    'lpfsubnoise'  : noiseLPF,
+    #'purenoise'    : noisePure,
+    #'lpfsubnoise'  : noiseLPF,
     'dynsys'       : dynsys_zealous,
 }
 
@@ -97,6 +97,8 @@ def processTask(task):
 
     # Compute results
     dataThis = modelFunc(paramThis).transpose((0, 2, 1))
+    if dataThis.shape != (nTrial, nData, nNode):
+        raise ValueError("Got shape", dataThis.shape, "expected", (nTrial, nData, nNode))
 
     # Save to h5 file
     outname = os.path.join(outpath, testType + "_" + modelName + "_" + str(nTrial) + "_" + str(nNode) + "_" + str(nData) + ".h5" )
@@ -114,29 +116,34 @@ def processTask(task):
 
 
 outpath = gui_fpath("Select output path", "./")
-nNode = 12
+nNodeLst = [12, 48]
 dt = 0.05   # 50ms, Yaro non-downsampled temporal resolution
 nStep = 40  # Number of different data sizes to pick
 tStep = 2   # Minimal number of time steps
-nDataLst = (2 * 10 ** (np.linspace(1.6, 2.9, nStep))).astype(int)
+nDataLst = (2 * 10 ** (np.linspace(1.6, 2.9, nStep))).astype(int)#[-3:]
 
 taskList = []
 
 # Generate task list
-for nDataRow in nDataLst:
-    for modelName in modelFuncDict.keys(): 
-        # Width analysis
-        nData = nDataRow * tStep
-        nTrial = 1
-        taskList += [("width", outpath, nNode, nData, nTrial, dt, modelName)]
+for nNode in nNodeLst:
+    for modelName in modelFuncDict.keys():
+        for nDataRow in nDataLst:
 
-        # Depth analysis
-        nData = tStep
-        nTrial = nDataRow
-        taskList += [("depth", outpath, nNode, nData, nTrial, dt, modelName)]
+            # Width analysis
+            nData = nDataRow * tStep
+            nTrial = 1
+            taskList += [("width", outpath, nNode, nData, nTrial, dt, modelName)]
+
+            # Depth analysis
+            nData = tStep
+            nTrial = nDataRow
+            taskList += [("depth", outpath, nNode, nData, nTrial, dt, modelName)]
+
+        taskList += [("typical", outpath, nNode, 200, 400, dt, modelName)]
 
 # Compute all tasks in parallel
-nCore = pathos.multiprocessing.cpu_count() - 1
+#nCore = pathos.multiprocessing.cpu_count() - 1
+nCore = 4
 print("Using nCores", nCore)
 pool = pathos.multiprocessing.ProcessingPool(nCore)
 rez_multilst = pool.map(processTask, taskList)

@@ -12,41 +12,47 @@ from codes.lib.signal_lib import approxDelayConv, resample_kernel
 from codes.lib.metrics.graph_lib import setDiagU
 
 
+# Convert discretized interval to number of steps
+def interv2steps(t, dt):
+    return int(np.round(t / dt)) + 1
+
+# There is one more post than intervals
+def steps2interv(nt, dt):
+    return (nt - 1) * dt
+
+
 # Generate pure noise data
 def noisePure(p):
-    nT = int(p['tTot'] / p['dt'])
+    nT = interv2steps(p['tTot'], p['dt'])
     return np.random.normal(0, p['std'], (p['nTrial'], p['nNode'], nT))
 
 
 # Generate LPF of noise data, possibly downsampled
 def noiseLPF(p):
-    tShift  = p['tauConv'] * 10    # seconds, Initial shift to avoid accumulation effects
-    nTShift = int(tShift / p['dtMicro']) + 1
-    nTMicro = int(p['tTot'] / p['dtMicro']) + 1
-    
-    if 'dt' in p.keys():
-        nT = int(p['tTot'] / p['dt']) + 1
-        tArrMicro = np.linspace(0, p['tTot'], nTMicro)
-        tArr       = np.linspace(0, p['tTot'], nT)
-        downsampleKernel = resample_kernel(tArrMicro, tArr, (p['dt']/2)**2)
-        
-    srcData = np.zeros((p['nTrial'], p['nNode'], nT))
+    tGrace       = p['tauConv'] * 3                        # seconds, Initial grace period to avoid accumulation effects
+    nTMicroGrace = interv2steps(tGrace, p['dtMicro'])      # Number of timesteps for grace period
+    nTMicroEff   = interv2steps(p['tTot'], p['dtMicro'])   # Number of timesteps for following data
+    nTMicroTot   = nTMicroGrace + nTMicroEff               # Total number of timesteps
 
     # Micro-simulation:
     # 1) Generate random data at neuronal timescale
     # 2) Compute convolution with Ca indicator
     # 3) Downsample to experimental time-resolution, if requested
-    for iTrial in range(p['nTrial']):
-        for iNode in range(p['nNode']):
-            dataRand = np.random.uniform(0, p['std'], nTMicro + nTShift)
-            dataConv = approxDelayConv(dataRand, p['tauConv'], p['dtMicro'])
+    dataRandTot = np.random.normal(0, p['std'], (nTMicroTot, p['nTrial'], p['nNode']))
+    dataConvTot = approxDelayConv(dataRandTot, p['tauConv'], p['dtMicro'])
+    dataConvEff = dataConvTot[nTMicroGrace:]
 
-            if 'dt' in p.keys():
-                srcData[iTrial, iNode] = downsampleKernel.dot(dataConv[nTShift:])
-            else:
-                srcData[iTrial, iNode] = dataConv[nTShift:]
+    if 'dt' in p.keys():
+        nT = interv2steps(p['tTot'], p['dt'])
+        tArrMicro = np.linspace(0, p['tTot'], nTMicroEff)
+        tArr      = np.linspace(0, p['tTot'], nT)
+        downsampleKernel = resample_kernel(tArrMicro, tArr, (p['dt']/2)**2)
+        #srcData = downsampleKernel.dot(dataConvEff)
+        srcData = np.einsum('ij, jkl', downsampleKernel, dataConvEff) #np.matmul(downsampleKernel, dataConvEff)
+    else:
+        srcData = dataConvEff
 
-    return np.array(srcData)
+    return srcData.transpose((1, 2, 0))  # [Trial x Node x Time]
 
 
 # Creates a network of consecutively-connected linear first order ODE's
@@ -73,4 +79,4 @@ def dynsys(param):
 
 # Get true connectivity for DynSys example
 def dynsys_gettrueconn(param):
-    return setDiagU(param['nNode'], 1)
+    return setDiagU(param['nNode'], 1, np.nan).T

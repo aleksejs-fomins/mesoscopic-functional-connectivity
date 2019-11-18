@@ -3,26 +3,31 @@ import bisect
 from scipy import interpolate
 
 
-
 def gaussian(mu, s2):
-    return np.exp(- mu**2 / (2 * s2) )
+    return np.exp(- mu**2 / (2 * s2))
 
 
 # Compute discretized exponential decay convolution
-def approxDelayConv(data, TAU, DT):
-    N = data.shape[0]
-    alpha = DT / TAU
+# Works with multidimensional arrays, as long as shapes are the same
+def approxDelayConv(data, tau, dt):
+    dataShape = data.shape
+    nTimesTmp = dataShape[0] + 1   # Temporary data 1 longer because recursive formula depends on past
+    tmpShape = (nTimesTmp, ) + dataShape[1:]
+
+    alpha = dt / tau
     beta = 1-alpha
     
-    rez = np.zeros(N+1)
-    for i in range(1, N+1):
+    rez = np.zeros(tmpShape)
+    for i in range(1, nTimesTmp):
         rez[i] = data[i-1]*alpha + rez[i-1]*beta
 
-    return rez[1:]
+    return rez[1:]  # Remove first element, because it is zero and meaningless. Get same shape as original data
+
 
 # # Imitate geometric sampling, by selecting some neurons 100% and the rest exponentially dropping
 # def samplingRangeScale(x, delta, tau):
 #     return np.multiply(x < delta, 1.0) + np.multiply(x >= delta, np.exp(-(x-delta)/tau))
+
 
 def trunc_idx(x1, xmin, xmax):
     l = bisect.bisect_left(x1, xmin)
@@ -32,11 +37,14 @@ def trunc_idx(x1, xmin, xmax):
 
 def resample_kernel(x1, x2, sig2):
     # Each downsampled val is average of all original val weighted by proximity kernel
-    xx1 = np.outer(x2, np.ones(len(x1)))
-    xx2 = np.outer(np.ones(len(x2)), x1)
+    n1 = x1.shape[0]
+    n2 = x2.shape[0]
+
+    xx1 = np.outer(x2, np.ones(n1))
+    xx2 = np.outer(np.ones(n2), x1)
     W = gaussian(xx2 - xx1, sig2)
 
-    for i in range(len(x2)):
+    for i in range(n2):
         W[i] /= np.sum(W[i])
 
     return W

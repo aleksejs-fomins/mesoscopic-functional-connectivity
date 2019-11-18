@@ -1,5 +1,6 @@
 from matplotlib import colors
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def plotMatrix(title, shape, mat_lst, title_lst, lims=None, draw=False, savename=None):
     
@@ -29,3 +30,10 @@ def plotMatrix(title, shape, mat_lst, title_lst, lims=None, draw=False, savename
         plt.draw()
     else:
         plt.show()
+
+
+# Add colorbar to existing imshow
+def imshowAddColorBar(fig, ax, img):
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.05)
+    fig.colorbar(img, cax=cax, orientation='vertical')
