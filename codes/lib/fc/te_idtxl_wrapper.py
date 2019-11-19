@@ -89,13 +89,13 @@ def getAnalysisClass(methodname):
 
 #@jpype_sync_thread
 @redirect_stdout
-def parallelTask(trg, data, settings):
-    analysisClass = getAnalysisClass(settings['method'])
+def parallelTask(trg, data, method, settings):
+    analysisClass = getAnalysisClass(method)
     return analysisClass.analyse_single_target(settings=settings, data=data, target=trg)
 
 
 # Parallelize a FC estimate over targets
-def idtxlParallelCPU(data, settings, NCore = None):
+def idtxlParallelCPU(data, settings, method, NCore = None):
     # Get number of processes
     idxProcesses = settings['dim_order'].index("p")
     nProcesses = data.shape[idxProcesses]
@@ -111,10 +111,10 @@ def idtxlParallelCPU(data, settings, NCore = None):
 
     targetLst = list(range(nProcesses))
 
-    parallelTaskCompact = lambda trg: parallelTask(trg, dataIDTxl, settings)
+    parallelTaskCompact = lambda trg: parallelTask(trg, dataIDTxl, method, settings)
     rez = pool.map(parallelTaskCompact, targetLst)
 
-    return idtxlResultsParse(rez, nProcesses, method=settings['method'], storage='matrix')
+    return idtxlResultsParse(rez, nProcesses, method=method, storage='matrix')
 
 
 # Parallelize FC estimate over targets, datasets and methods
@@ -170,20 +170,18 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
     ###############################
     # Compute estimators in parallel
     ###############################
+    def task_gen():
+        for sw in sweepLst:
+            methodIdx, dataIdx, targetIdx = sw
+            yield int(targetIdx), dataIDTxl_lst[dataIdx], methods[int(methodIdx)], settings
+
     @time_mem_1starg
-    def multiParallelTask(sw, dataIDTxl_lst, methods, settings):
-        methodIdx, dataIdx, targetIdx = sw
-        settingsThis = settings.copy()
-        settingsThis["method"] = methods[int(methodIdx)]
-
-        return parallelTask(int(targetIdx), dataIDTxl_lst[dataIdx], settingsThis)
-
+    def parallelTaskProxy(task):
+        iTrg, data, method, settings = task
+        return parallelTask(iTrg, data, method, settings)
 
     print("----Root process", procIdRoot, "started task on", NCore, "cores----")
-
-    multiParallelTaskCompact = lambda sw: multiParallelTask(sw, dataIDTxl_lst, methods, settings)
-    rez_multilst = myMap(multiParallelTaskCompact, sweepLst)
-
+    rez_multilst = myMap(parallelTaskProxy, task_gen())
 
     ###############################
     # Parse computed matrices
@@ -196,12 +194,5 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
         for m, method in enumerate(methods)
     }
 
-    # rezParsed = {
-    #     method : np.array([[rez_multilst[tripleIdxs[(m, d, t)]] for t in tIds] for d in dIdxs])
-    #     for m, method in enumerate(methods)
-    # }
-
-
     print("----Root process", procIdRoot, "finished task")
-    
     return rezParsed

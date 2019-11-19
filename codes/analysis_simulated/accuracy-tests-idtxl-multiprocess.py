@@ -43,11 +43,11 @@ idtxlSettings = {
 #############################
 simulated.analysis_width_depth(dataFileNames, idtxlSettings, methods)
 
-# #############################
-# # SNR Tests
-# #############################
-# nStep = 40  # Number of different data sizes to pick
-# simulated.analysis_snr(typicalFileName, "dynsys", idtxlSettings, nStep)
+#############################
+# SNR Tests
+#############################
+nStep = 40  # Number of different data sizes to pick
+simulated.analysis_snr(dataFileNames, "dynsys", idtxlSettings, nStep)
 #
 # ################
 # # Window / Lag / Downsample

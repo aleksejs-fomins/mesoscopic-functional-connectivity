@@ -19,39 +19,12 @@ pTHR = 0.01     # P-value for IDTxl thresholding
 fExt = '.svg'   # Request vector graphics. Can also use .png
 methods = ['BivariateMI', 'MultivariateMI', 'BivariateTE', 'MultivariateTE']
 
+dataParamsDict = {
+    "analysis"  : ["width", "depth", "snr", "window", "lag", "downsample"],
+    "logx"      : [True, True, True, False, False, False],
 
+}
 for fname in dataFileNames:
     fig_fname = fname[:-3] + fExt
 
-
-
-    #############################
-    # Width / Depth plots
-    #############################
-    if ("width" in fname) or ("depth" in fname):
-        fc_accuracy_plots_fromfile(dataFileNames, methods, pTHR, logx=True, percenty=True, fig_fname=fig_fname)
-
-
-    #############################
-    # SNR plots
-    #############################
-    if "snr" in fname:
-        pass
-
-    #############################
-    # Window plots
-    #############################
-    if "window" in fname:
-        pass
-
-    #############################
-    # Lag plots
-    #############################
-    if "lag" in fname:
-        pass
-
-    #############################
-    # Downsample plots
-    #############################
-    if "downsample" in fname:
-        pass
+    fc_accuracy_plots_fromfile(fig_fname, methods, pTHR, logx=True, percenty=True, fig_fname=fig_fname)
