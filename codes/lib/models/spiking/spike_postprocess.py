@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+import nest
 
 # COMPUTE ENERGY TRANSFER and save to HDF5
 # TODO: IMPLEMENT TIME_DELAY INTO ENERGY TRANSFER

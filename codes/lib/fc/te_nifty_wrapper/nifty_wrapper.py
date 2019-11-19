@@ -5,16 +5,8 @@ import matplotlib.pyplot as plt
 import scipy.io
 import h5py
 
-# Find relative local paths to stuff
-path1p = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-path2p = os.path.dirname(path1p)
-pwd_lib = os.path.join(path1p, "lib/")
-
-# Set paths
-sys.path.append(pwd_lib)
-
 # Load user libraries
-from matlab.matlab_lib import loadmat
+from codes.lib.data_io.matlab_lib import loadmat
 
 '''
   TODO:

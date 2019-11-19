@@ -11,13 +11,11 @@ import json
 import numpy as np
 
 # Append base directory
-currentdir = os.path.dirname(os.path.abspath(__file__))
-path1p = os.path.dirname(currentdir)
-path2p = os.path.dirname(path1p)
-rootdir = os.path.dirname(path2p)
-
-sys.path.insert(0, rootdir)
-print("Appended root directory", rootdir)
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+sys.path.append(rootpath)
+print("Appended root directory", rootpath)
 
 # User libraries
 from codes.lib.data_io.os_lib import getfiles_walk

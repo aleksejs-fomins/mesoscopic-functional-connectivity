@@ -3,14 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Export library path
+rootname = "mesoscopic-functional-connectivity"
 thispath = os.path.dirname(os.path.abspath(__file__))
-parpath = os.path.abspath(os.path.join(thispath, os.pardir))
-sys.path.append(os.path.join(parpath, 'lib/'))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
+sys.path.append(rootpath)
 
-from matlab.matlab_yaro_lib import read_mat
+from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
+
 # Read LVM file from command line
 inputpath = sys.argv[1]
-data, behaviour = read_mat(inputpath)
+data, behaviour, performance = read_neuro_perf(inputpath)
 
 nTrials, nTimes, nChannels = data.shape
 

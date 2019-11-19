@@ -1,14 +1,8 @@
 # Load standard libraries
-import os, sys
 import numpy as np
 
-# # Add path to parent folder
-# p1dir = os.path.dirname(os.path.realpath(__file__))
-# pwd_lib = os.path.dirname(p1dir)
-# sys.path.append(pwd_lib)
-
 # Load user libraries
-from codes.lib.signal_lib import approxDelayConv, resample_kernel
+from codes.lib.signal_lib import approx_decay_conv, resample_kernel
 from codes.lib.metrics.graph_lib import setDiagU
 
 
@@ -39,7 +33,7 @@ def noiseLPF(p):
     # 2) Compute convolution with Ca indicator
     # 3) Downsample to experimental time-resolution, if requested
     dataRandTot = np.random.normal(0, p['std'], (nTMicroTot, p['nTrial'], p['nNode']))
-    dataConvTot = approxDelayConv(dataRandTot, p['tauConv'], p['dtMicro'])
+    dataConvTot = approx_decay_conv(dataRandTot, p['tauConv'], p['dtMicro'])
     dataConvEff = dataConvTot[nTMicroGrace:]
 
     if 'dt' in p.keys():

@@ -11,8 +11,8 @@ from codes.lib.models.false_negative_transform import makedata_snr_observational
 
 
 def parse_file_names_pandas(dataFileNames):
-    baseNames = [os.path.basename(fname) for fname in dataFileNames]
-    fileInfoDf = pd.DataFrame([fname[:-3].split('_') for fname in baseNames],
+    baseNamesBare = [os.path.splitext(os.path.basename(fname))[0] for fname in dataFileNames]
+    fileInfoDf = pd.DataFrame([fname.split('_') for fname in baseNamesBare],
                               columns = ['analysis', 'modelname', 'nTrial', 'nNode', 'nTime'])
     fileInfoDf = fileInfoDf.astype(dtype={'nTrial': 'int', 'nNode': 'int', 'nTime': 'int'})
     fileParams = {
@@ -89,12 +89,17 @@ def analysis_width_depth(dataFileNames, idtxlSettings, methods, pTHR=0.01, figEx
 
                 for iMethod, method in enumerate(methods):
                     fname_h5 = analysis + "_" + modelName + '_' + str(nNode) + '.h5'
-                    fname_svg = fname_h5[:-3] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
                     teData = rezIDTxl[method].transpose((1,2,3,0))
-                    fc_accuracy_plots(nDataEff, teData, trueConn, method, pTHR, logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_svg)
+                    fc_accuracy_plots(nDataEff, teData, trueConn, method, pTHR, logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
 
 def analysis_snr(dataFileNames, idtxlSettings, methods, modelName, nStep, pTHR=0.01, figExt='.svg', NCore=None):
+    window = 6
+    idtxlSettingsThis = idtxlSettings.copy()
+    idtxlSettingsThis['min_lag_sources'] = 1
+    idtxlSettingsThis['max_lag_sources'] = 5
+
     # Set parameter ranges
     paramRangesDict = {
         'observational'  : np.arange(nStep) / (nStep),
@@ -130,18 +135,18 @@ def analysis_snr(dataFileNames, idtxlSettings, methods, modelName, nStep, pTHR=0
                 print("- Processing Flavour", flavour)
 
                 # Add noise to data according to noise flavour
-                dataLst = dataNoiseFuncDict[flavour](data, paramRanges)
+                dataLst = dataNoiseFuncDict[flavour](data[:, :window, :], paramRanges)
 
                 # Run calculation
-                rezIDTxl = idtxlParallelCPUMulti(dataLst, idtxlSettings, methods, NCore=NCore)
+                rezIDTxl = idtxlParallelCPUMulti(dataLst, idtxlSettingsThis, methods, NCore=NCore)
 
                 # Save to h5 and make plots
                 for iMethod, method in enumerate(methods):
                     fname_h5 = "snr_" + flavour + '_' + modelName + '_' + str(nNode) + '_' + method
-                    fname_svg = fname_h5[:-3] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
                     teData = rezIDTxl[method].transpose((1, 2, 3, 0))
 
-                    fc_accuracy_plots(paramRanges, teData, trueConn, method, pTHR, logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_svg)
+                    fc_accuracy_plots(paramRanges, teData, trueConn, method, pTHR, logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
 
 def analysis_window(dataFileNames, idtxlSettings, methods, wMin, wMax, pTHR=0.01, figExt='.svg', NCore=None):
@@ -175,10 +180,10 @@ def analysis_window(dataFileNames, idtxlSettings, methods, wMin, wMax, pTHR=0.01
                 # Save to h5 and make plots
                 for iMethod, method in enumerate(methods):
                     fname_h5 = "window_" + str(wMin) + '_' + str(wMax) + '_' + modelName + '_' + str(nNode) + '_' + method
-                    fname_svg = fname_h5[:-3] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
                     teData = rezIDTxl[method].transpose((1, 2, 3, 0))
 
-                    fc_accuracy_plots(windowRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_svg)
+                    fc_accuracy_plots(windowRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
 
 def analysis_lag(dataFileNames, idtxlSettings, methods, lMin, lMax, pTHR=0.01, figExt='.svg', NCore=None):
@@ -216,10 +221,10 @@ def analysis_lag(dataFileNames, idtxlSettings, methods, lMin, lMax, pTHR=0.01, f
                 # Save to h5 and make plots
                 for iMethod, method in enumerate(methods):
                     fname_h5 = "lag_" + str(lMin) + '_' + str(lMax) + '_' + modelName + '_' + str(nNode) + '_' + method
-                    fname_svg = fname_h5[:-3] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
                     teData = np.array([teDataSingle[0] for teDataSingle in rezIDTxlDict[method]]).transpose((1, 2, 3, 0))
 
-                    fc_accuracy_plots(lagRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_svg)
+                    fc_accuracy_plots(lagRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
 
 def analysis_downsample(dataFileNames, idtxlSettings, methods, downsampleTimesRange, pTHR=0.01, figExt='.svg', NCore=None):
@@ -258,7 +263,7 @@ def analysis_downsample(dataFileNames, idtxlSettings, methods, downsampleTimesRa
                 # Save to h5 and make plots
                 for iMethod, method in enumerate(methods):
                     fname_h5 = "window_" + str(dsMin) + '_' + str(dsMax) + '_' + modelName + '_' + str(nNode) + '_' + method
-                    fname_svg = fname_h5[:-3] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
                     teData = rezIDTxl[method].transpose((1, 2, 3, 0))
 
-                    fc_accuracy_plots(downsampleTimesRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_svg)
+                    fc_accuracy_plots(downsampleTimesRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)

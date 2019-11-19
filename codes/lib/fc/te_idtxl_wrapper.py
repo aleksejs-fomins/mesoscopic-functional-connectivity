@@ -1,25 +1,21 @@
-import os,sys
-#import contextlib
+import numpy as np
+import multiprocessing
 import numpy as np
 import pandas as pd
-import pathos, multiprocessing
+import pathos
 
 # IDTxl libraries
 from idtxl.bivariate_mi import BivariateMI
-from idtxl.multivariate_mi import MultivariateMI
 from idtxl.bivariate_te import BivariateTE
-from idtxl.multivariate_te import MultivariateTE
 from idtxl.data import Data
-#import jpype as jp
+from idtxl.multivariate_mi import MultivariateMI
+from idtxl.multivariate_te import MultivariateTE
+# import jpype as jp
 
-# Append base directory
-currentdir = os.path.dirname(os.path.abspath(__file__))
-path1p = os.path.dirname(currentdir)
-rootdir = os.path.dirname(path1p)
-sys.path.insert(0, rootdir)
+# Local libraries
+from codes.lib.aux_functions import mem_now_as_str
+from codes.lib.decorators_lib import redirect_stdout, time_mem_1starg  # , jpype_sync_thread
 
-from codes.lib.aux_functions import memNowAsStr
-from codes.lib.fc.jpype_wrapper import redirect_stdout, time_mem_1starg#, jpype_sync_thread
 
 
 # Convert results structure into set of matrices for better usability
@@ -125,7 +121,7 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
     * Number of processes (aka channels) must be equal for all datasets
     '''
 
-    print("Mem:", memNowAsStr(), "- Start of subroutine")
+    print("Mem:", mem_now_as_str(), "- Start of subroutine")
 
     ##########################################
     # Determine parameters for the parameter sweep
@@ -152,7 +148,7 @@ def idtxlParallelCPUMulti(dataLst, settings, methods, NCore = None, serial=False
     ###############################
     dataIDTxl_lst = [Data(d, dim_order=settings['dim_order']) for d in dataLst]
 
-    print("Mem:", memNowAsStr(), "- Converted all data to IDTxl format")
+    print("Mem:", mem_now_as_str(), "- Converted all data to IDTxl format")
 
     ###############################
     # Initialize multiprocessing pool

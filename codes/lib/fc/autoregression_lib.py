@@ -53,6 +53,7 @@ def AR_PREDICT(data, p, A_LST, Inp=None, B=None):
         rez += np.einsum('ai,ijk', B, U)    
     return rez
 
+
 def AR_MLE(data, p, Inp = None):
 
     if Inp is None:

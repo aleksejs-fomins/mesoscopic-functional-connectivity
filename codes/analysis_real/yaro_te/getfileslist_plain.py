@@ -4,17 +4,15 @@ import json
 import numpy as np
 
 # Append base directory
-currentdir = os.path.dirname(os.path.abspath(__file__))
-path1p = os.path.dirname(currentdir)
-path2p = os.path.dirname(path1p)
-libpath = os.path.join(path2p, "lib")
-
-sys.path.insert(0, libpath)
-print("Appended library directory", libpath)
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+sys.path.append(rootpath)
+print("Appended root directory", rootpath)
 
 # User libraries
-from data_io.os_lib import getfiles_walk
-from data_io.qt_wrapper import gui_fpath
+from codes.lib.data_io.os_lib import getfiles_walk
+from codes.lib.data_io.qt_wrapper import gui_fpath
 
 # Step 1: Get all data files
 thisFolder = './'

@@ -1,4 +1,4 @@
-from codes.lib.fc.jpype_wrapper import time_mem_1starg
+from codes.lib.decorators_lib import time_mem_1starg
 
 
 @time_mem_1starg

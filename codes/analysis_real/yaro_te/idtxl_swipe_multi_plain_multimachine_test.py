@@ -3,6 +3,7 @@
 ##############################
 
 # Standard libraries
+import os,sys
 import json
 import h5py
 import copy
@@ -14,22 +15,22 @@ from time import gmtime, strftime
 from pkg_resources import resource_filename
 
 # Append base directory
-import os,sys
-currentdir = os.path.dirname(os.path.abspath(__file__))
-path1p = os.path.dirname(currentdir)
-path2p = os.path.dirname(path1p)
-libpath = os.path.join(path2p, "lib")
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+sys.path.append(rootpath)
+print("Appended root directory", rootpath)
 
-sys.path.insert(0, libpath)
-print("Appended library directory", libpath)
-
-# User libraries
-from data_io.os_lib import getfiles_walk
-from data_io.yaro.yaro_data_read import read_neuro_perf
-from signal_lib import resample
-from qt_wrapper import gui_fpath, gui_fname
+# IDTxl libraries
 from idtxl.data import Data
 import jpype as jp
+
+# User libraries
+from codes.lib.data_io.os_lib import getfiles_walk
+from codes.lib.data_io.qt_wrapper import gui_fpath, gui_fname
+from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
+from codes.lib.signal_lib import resample
+
 
 
 def idtxlParallelCPUMulti(dataLst, settings, taskName, NCore=None):

@@ -3,11 +3,6 @@ from datetime import datetime
 import numpy as np
 import scipy.io
 
-# # Export library path
-# thispath = os.path.dirname(os.path.abspath(__file__))
-# libpath = os.path.dirname(thispath)
-# sys.path.append(libpath)
-
 from codes.lib.data_io.os_lib import get_subfolders
 from codes.lib.data_io.matlab_lib import loadmat, matstruct2dict
 from codes.lib.aux_functions import merge_dicts

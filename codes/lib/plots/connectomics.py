@@ -2,14 +2,10 @@ import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Export library path
-thispath = os.path.dirname(os.path.abspath(__file__))
-libpath = os.path.dirname(thispath)
-sys.path.append(libpath)
+from codes.lib.metrics import graph_lib
+from codes.lib.signal_lib import resample
+from codes.lib.aux_functions import slice_sorted
 
-import graph_lib
-from signal_lib import resample
-from aux_functions import slice_sorted
 
 # Metrics for binary connectivity matrix as function of time
 def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, timestep):
@@ -66,6 +62,7 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     plt.savefig(outname)
     plt.close()
 
+
 # Metrics for TE matrix as function of time
 def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, timestep):        
     floatMetrics = {    # 1 number per matrix
@@ -118,6 +115,7 @@ def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, tim
 #         ax[iMetric].legend()
     plt.savefig(outname)
     plt.close()
+
 
 # Metrics for binary connectivity matrix as function of days
 #   Strategy 1: Conn=True if have at least 1 conn within range
@@ -189,7 +187,8 @@ def plot_te_binary_metrics_rangebydays(outname, timesLst, dataLst, labelLst, ran
             ax[iStrat, iMetric].legend()
     plt.savefig(outname)
     plt.close()
-  
+
+
 # Metrics for binary connectivity matrix as function of days
 #   Strategy 1: Conn=True if have at least 1 conn within range
 #   Strategy 2: Compute 1 metric per time step, average over range
@@ -504,5 +503,3 @@ def plot_te_rel_diff_nlinks_bydays(outname, timesLst1, timesLst2, dataLst1, data
     ax.set_ylabel("Relative diff in TE")
     plt.savefig(outname)
     plt.close()
-    
-    

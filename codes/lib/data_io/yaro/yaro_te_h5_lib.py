@@ -2,12 +2,7 @@ import numpy as np
 import os, sys
 import h5py
 
-# Export library path
-thispath = os.path.dirname(os.path.abspath(__file__))
-libpath = os.path.dirname(thispath)
-sys.path.append(libpath)
-
-from qt_wrapper import gui_fnames
+from codes.lib.data_io.qt_wrapper import gui_fnames
 
 
 # Extract TE from H5 file

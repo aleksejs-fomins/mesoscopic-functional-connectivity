@@ -5,20 +5,16 @@ import matplotlib.pyplot as plt
 import scipy.io
 import h5py
 
-# Find relative local paths to stuff
-path1p = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-path2p = os.path.dirname(path1p)
-pwd_lib = os.path.join(path1p, "lib/")
-pwd_rez = os.path.join(os.path.join(path2p, "data/"), "sim-ds-mat")
-
-# Set paths
-sys.path.append(pwd_lib)
+# Export library path
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
+sys.path.append(rootpath)
 
 # Load user libraries
-from signal_lib import approxDelayConv
-from nifty_wrapper.nifty_wrapper import nifty_wrapper
-
-
+from codes.lib.signal_lib import approx_decay_conv
+from codes.lib.fc.te_nifty_wrapper.nifty_wrapper import nifty_wrapper
 
 ########################
 ## Generate input data
@@ -69,7 +65,7 @@ for iTrial in range(N_TRIAL):
         # 1) Generate random data at neuronal timescale
         # 2) Compute convolution with Ca indicator
         data_micro = np.random.uniform(0, 1, NT_MICRO + NT_MICRO_SHIFT)
-        data_micro_conv = approxDelayConv(data_micro, TAU_CONV, DT_MICRO)[NT_MICRO_SHIFT:]
+        data_micro_conv = approx_decay_conv(data_micro, TAU_CONV, DT_MICRO)[NT_MICRO_SHIFT:]
             
         # Downsampling:
         # * Bin convolved data to sampling timescale

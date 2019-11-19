@@ -3,28 +3,26 @@
 ##############################
 
 # Standard libraries
+import os,sys
 import json
 import h5py
 import numpy as np
 
 # Append base directory
-import os,sys
-currentdir = os.path.dirname(os.path.abspath(__file__))
-path1p = os.path.dirname(currentdir)
-path2p = os.path.dirname(path1p)
-rootpath = os.path.dirname(path2p)
-
-sys.path.insert(0, rootpath)
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+sys.path.append(rootpath)
 print("Appended root directory", rootpath)
 
 # User libraries
-from codes.lib.aux_functions import memNowAsStr
+from codes.lib.aux_functions import mem_now_as_str
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
 from codes.lib.signal_lib import resample
 from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti
 
 
-print("Mem:", memNowAsStr(), "- Start of code")
+print("Mem:", mem_now_as_str(), "- Start of code")
 
 ##############################
 #  Constants
@@ -84,7 +82,7 @@ folderName = os.path.basename(folderPathName)
 # Read LVM file from command line
 data, behaviour, performance = read_neuro_perf(folderPathName)
 
-print("Mem:", memNowAsStr(), "- Loaded data")
+print("Mem:", mem_now_as_str(), "- Loaded data")
 
 # Get parameters
 nTrials, nTimes, nChannels = data.shape

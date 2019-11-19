@@ -16,6 +16,8 @@ TODO:
 * Effects of dendritic and axonal signals, neuropil?
 '''
 
+from codes.lib.signal_lib import approx_decay_conv
+
 # Take discretized spiking signal, produce macroscopic CA indicator response
 # NOTE: NEURON INDICES MUST BE CONTIGUOUS
 def spike2ca(spikeTimes, neuronIdxs, p):
@@ -39,7 +41,7 @@ def spike2ca(spikeTimes, neuronIdxs, p):
         signalCaAvg[b] += neuronVariability[i]
 
     # Convolve time-signal with indicator response
-    signalCaAvg = approxDelayConv(signalCaAvg, p['TAU_CA_IND'], p['DT'])
+    signalCaAvg = approx_decay_conv(signalCaAvg, p['TAU_CA_IND'], p['DT'])
 
     return times_discr, signalCaAvg
 

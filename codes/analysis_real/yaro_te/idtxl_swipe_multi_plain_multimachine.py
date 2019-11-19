@@ -3,18 +3,16 @@
 ##############################
 
 # Standard libraries
+import os, sys
 import json
 import h5py
 import numpy as np
 
 # Append base directory
-import os,sys
-currentdir = os.path.dirname(os.path.abspath(__file__))
-path1p = os.path.dirname(currentdir)
-path2p = os.path.dirname(path1p)
-rootpath = os.path.dirname(path2p)
-
-sys.path.insert(0, rootpath)
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+sys.path.append(rootpath)
 print("Appended root directory", rootpath)
 
 # User libraries

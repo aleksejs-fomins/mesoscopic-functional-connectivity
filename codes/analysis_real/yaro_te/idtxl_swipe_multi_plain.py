@@ -2,29 +2,39 @@
 #  Includes
 ##############################
 
+'''
+
+
+1!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+
+DANGER: DOES NOT YET COMPARE nTrial < 50
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+'''
+
+
 # Standard libraries
+import os,sys
 import h5py
-import copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Append base directory
-import os,sys
-currentdir = os.path.dirname(os.path.abspath(__file__))
-path1p = os.path.dirname(currentdir)
-path2p = os.path.dirname(path1p)
-libpath = os.path.join(path2p, "lib")
-
-sys.path.insert(0, libpath)
-print("Appended library directory", libpath)
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+sys.path.append(rootpath)
+print("Appended root directory", rootpath)
 
 # User libraries
-from data_io.os_lib import getfiles_walk
-from data_io.yaro.yaro_data_read import read_neuro_perf
-from signal_lib import resample
-from fc.te_idtxl_wrapper import idtxlParallelCPUMulti, idtxlResultsParse
-from qt_wrapper import gui_fpath
+from codes.lib.signal_lib import resample
+from codes.lib.data_io.os_lib import getfiles_walk
+from codes.lib.data_io.qt_wrapper import gui_fpath
+from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
+from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti, idtxlResultsParse
+
 
 
 ##############################

@@ -1,10 +1,13 @@
-# Export library path
 import os, sys
-thispath = os.path.dirname(os.path.abspath(__file__))
-parpath = os.path.abspath(os.path.join(thispath, os.pardir))
-sys.path.append(os.path.join(parpath, 'lib/'))
 
-from plots.plot_graph import plotGraph
+# Export library path
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
+sys.path.append(rootpath)
+
+from codes.lib.plots.directed_graph import plotGraph
 
 
 N_REGION = 5

@@ -1,10 +1,17 @@
+import os, sys
 from time import time
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Export library path
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
+sys.path.append(rootpath)
+
 from codes.lib.fc.corr_lib import crossCorr
 from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPU
-# Datasets
 
 # IDTxl parameters
 def getIDTxlSettings(est, method):

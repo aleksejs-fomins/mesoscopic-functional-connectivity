@@ -4,12 +4,12 @@ import bisect
 import psutil
 
 # Get current time as string
-def timeNowAsStr():
+def time_now_as_str():
     return strftime("[%Y.%m.%d %H:%M:%S]", gmtime())
 
 
 # Get current memory use as string
-def memNowAsStr():
+def mem_now_as_str():
     return str(psutil.virtual_memory().used)
 
 

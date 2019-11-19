@@ -9,15 +9,15 @@ DO NOT USE SAME PROCEDURE FOR UPSAMPLING AND DOWNSAMPLING
 '''
 
 # import standard libraries
-import sys
-from os.path import dirname, abspath, join
+import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Export library path
-thispath   = dirname(abspath(__file__))
-parentpath = dirname(thispath)
-rootpath    = join(parentpath, 'lib')
+rootname = "mesoscopic-functional-connectivity"
+thispath   = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 # import special libraries

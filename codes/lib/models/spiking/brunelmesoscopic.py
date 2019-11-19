@@ -4,15 +4,9 @@ import scipy.signal
 import nest
 import h5py
 
-# Export library path
-import os, sys
-thispath = os.path.dirname(os.path.abspath(__file__))
-parpath = os.path.abspath(os.path.join(thispath, os.pardir))
-sys.path.append(os.path.join(parpath, 'lib/'))
-
 # Import local libraries
-from plot_graph import plotGraph
-from spike2ca import spike2ca
+from codes.lib.plots.directed_graph import plotGraph
+#from spike2ca import spike2ca
 
 
 class BrunnelMesoscopic():

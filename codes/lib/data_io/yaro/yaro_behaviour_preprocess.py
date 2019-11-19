@@ -1,17 +1,12 @@
 import numpy as np
-import os, sys
 
-# Export library path
-thispath = os.path.dirname(os.path.abspath(__file__))
-libpath = os.path.dirname(thispath)
-sys.path.append(libpath)
-
-from signal_lib import trunc_idx, resample
+from codes.lib.aux_functions import slice_sorted
+from codes.lib.signal_lib import resample
 
 
 def resample_lick(f_lick, neuro, behaviour, TARGET_TIMES, TARGET_FREQ):
     param_resample = {'method' : 'averaging', 'kind' : 'kernel', 'ker_sig2' : (2.0/TARGET_FREQ)**2}
-    l,r = trunc_idx(f_lick['tLicks'], 0, 8)
+    l,r = slice_sorted(f_lick['tLicks'], [0, 8])
     tLicksTrunc = f_lick['tLicks'][l:r]
 
     #nTrials = f_lick['reward_time'].shape[0]
@@ -94,7 +89,7 @@ def resample_paw(f_paw, TARGET_TIMES, TARGET_FREQ):
     #data_paw /= np.max(data_paw)
 
     # Truncate
-    l,r = trunc_idx(f_paw['tPaw'], 0, 8)
+    l,r = slice_sorted(f_paw['tPaw'], [0, 8])
     paw_times_tmp = f_paw['tPaw'][l:r]
     data_paw = data_paw[:, l:r]
 
@@ -121,7 +116,7 @@ def resample_whisk(f_whisk, TARGET_TIMES):
     f_whisk['whiskAbsVelocity'] = np.vstack((np.abs(f_whisk['whiskAngle'][1:] - f_whisk['whiskAngle'][:-1]), np.zeros(nTrials)))
 
     # Truncate
-    l,r = trunc_idx(f_whisk['tWhisk'], 0, 8)
+    l,r = slice_sorted(f_whisk['tWhisk'], [0, 8])
     f_whisk['tWhisk']     = f_whisk['tWhisk'][l:r]
     f_whisk['whiskAngle'] = f_whisk['whiskAngle'][l:r]
     f_whisk['whiskAbsVelocity'] = f_whisk['whiskAbsVelocity'][l:r]

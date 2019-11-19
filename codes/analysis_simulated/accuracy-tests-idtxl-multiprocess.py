@@ -1,29 +1,15 @@
 import os, sys
-import h5py
-import numpy as np
-import copy
+
+# Export library path
+rootname = "mesoscopic-functional-connectivity"
+thispath   = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
+sys.path.append(rootpath)
 
 from codes.lib.data_io.qt_wrapper import gui_fnames, gui_fname
 from codes.lib.analysis import simulated
 
-'''
-  Width/Depth Test Code:
-    Load all width files
-    Compute TE
-    Make Plots, Store TE
-
-  SNR Code:
-    Load Typical File
-    Loop over added noise / freq
-    Compute TE
-    Make Plots, Store TE
-
-  Win/Lag/DS Code:
-    Load Typical File
-    Loop over windows, lag, ds
-    Compute TE
-    Make Plots, Store TE
-'''
 
 dataFileNames = gui_fnames("Get simulated data files", "./", "hdf5 (*.h5)")
 #typicalFileName = gui_fname("Get typical data file", os.path.dirname(dataFileNames[0]), "hdf5 (*.h5)")
@@ -41,13 +27,14 @@ idtxlSettings = {
 #############################
 # Width / Depth Tests
 #############################
-simulated.analysis_width_depth(dataFileNames, idtxlSettings, methods)
+# simulated.analysis_width_depth(dataFileNames, idtxlSettings, methods)
 
 #############################
 # SNR Tests
 #############################
 nStep = 40  # Number of different data sizes to pick
-simulated.analysis_snr(dataFileNames, "dynsys", idtxlSettings, nStep)
+simulated.analysis_snr(dataFileNames, idtxlSettings, methods, "dynsys", nStep, NCore=4)
+
 #
 # ################
 # # Window / Lag / Downsample

@@ -17,8 +17,7 @@ def hist_int(ax, x, labels=None, xmin=None, xmax=None):
     if labels is None:
         ax.hist(x, bins=bins_ext, rwidth=0.5, density=True)
     else:
-        for xThis, label in zip(x, labels):
-            ax.hist(x, bins=bins_ext, rwidth=0.5, density=True, alpha=0.5, label=label)
+        ax.hist(np.array(x).T, bins=bins_ext, rwidth=0.5, density=True, label=labels) # , alpha=0.5
         ax.legend()
 
     ax.set_xticks(bins)

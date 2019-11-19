@@ -1,12 +1,12 @@
+import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Export library path
-import sys
-from os.path import dirname, abspath, join
-thispath   = dirname(abspath(__file__))
-parentpath = dirname(thispath)
-rootpath    = join(parentpath, 'lib')
+rootname = "mesoscopic-functional-connectivity"
+thispath = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 from codes.lib.fc.corr_lib import corr3D

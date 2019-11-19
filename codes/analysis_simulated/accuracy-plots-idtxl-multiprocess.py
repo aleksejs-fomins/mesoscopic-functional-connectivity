@@ -1,7 +1,12 @@
 import os, sys
-import h5py
 import numpy as np
-import copy
+
+# Export library path
+rootname = "mesoscopic-functional-connectivity"
+thispath   = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
+sys.path.append(rootpath)
 
 from codes.lib.data_io.qt_wrapper import gui_fnames
 from codes.lib.plots.accuracy import fc_accuracy_plots_fromfile
@@ -22,9 +27,24 @@ methods = ['BivariateMI', 'MultivariateMI', 'BivariateTE', 'MultivariateTE']
 dataParamsDict = {
     "analysis"  : ["width", "depth", "snr", "window", "lag", "downsample"],
     "logx"      : [True, True, True, False, False, False],
-
 }
-for fname in dataFileNames:
-    fig_fname = fname[:-3] + fExt
 
-    fc_accuracy_plots_fromfile(fig_fname, methods, pTHR, logx=True, percenty=True, fig_fname=fig_fname)
+def testAnalysisType(fname):
+    testType = [key in fname for key in dataParamsDict['analysis']]
+    if np.sum(testType) != 1:
+        raise ValueError(fname, "matched", np.sum(testType), "analysis types")
+
+    testIdx = np.where(testType)[0][0]
+    analysis = dataParamsDict["analysis"][testIdx]
+    logx = dataParamsDict["logx"][testIdx]
+    return analysis, logx
+
+
+for fname in dataFileNames:
+    fig_fname = os.path.splitext(fname)[0] + fExt
+
+    print(fig_fname)
+
+    analysis, logx = testAnalysisType(fname)
+
+    fc_accuracy_plots_fromfile(fname, methods, pTHR, logx=logx, percenty=True, fig_fname=fig_fname)

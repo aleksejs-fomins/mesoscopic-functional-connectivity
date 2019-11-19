@@ -1,21 +1,19 @@
-# Export library path
-import os, sys
-thispath = os.path.dirname(os.path.abspath(__file__))
-p1path = os.path.abspath(os.path.join(thispath, os.pardir))
-p2path = os.path.abspath(os.path.join(p1path, os.pardir))
-sys.path.append(os.path.join(p1path, 'lib/'))
-
-# Locate results path
-rezPath = os.path.join(os.path.join(p2path, 'data/'), 'sim_ds_h5')
-
 # Standard libraries
+import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
 
+# Export library path
+rootname = "mesoscopic-functional-connectivity"
+thispath   = os.path.dirname(os.path.abspath(__file__))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
+sys.path.append(rootpath)
+
 # Local libraries
-from corr_lib import crossCorr
-from plots.plt_imshow_mat import plotImshowMat
+from codes.lib.fc.corr_lib import crossCorr
+from codes.lib.plots.matrix import plotMatrix
 
 
 fname_lst = [
@@ -55,7 +53,7 @@ for filename in fname_lst:
     #  Plot
     #######################
 
-    plotImshowMat(
+    plotMatrix(
         [corrMat, corrDelMat, sprMat,  sprDelMat],
         ['Corr', 'Spr', 'CorrDel', 'SprDel'],
         "Cross-correlation for " + filename,
@@ -79,7 +77,7 @@ for filename in fname_lst:
 #corrMat, corrDelMat = crossCorr(data2, DELAY_MIN, DELAY_MAX, est='corr')
 #sprMat,  sprDelMat = crossCorr(data2, DELAY_MIN, DELAY_MAX, est='spr')
 
-#plotImshowMat(
+#plotMatrix(
     #[[corrMat, corrDelMat], [sprMat,  sprDelMat]],
     #np.array([['Corr', 'Spr'],['CorrDel', 'SprDel']]),
     #"Cross-correlation for DynSys - with velocities",

@@ -4,12 +4,7 @@ import datetime
 import numpy as np
 import pandas as pd
 
-# Export library path
-thispath = dirname(abspath(__file__))
-libpath = dirname(thispath)
-sys.path.append(libpath)
-
-from os_lib import getfiles_walk
+from codes.lib.data_io.os_lib import getfiles_walk
 
 def mousekey2date(key):
     return datetime.datetime(*np.array(key.split("_")[2:5], dtype=int))

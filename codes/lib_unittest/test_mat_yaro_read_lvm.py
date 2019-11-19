@@ -1,14 +1,15 @@
-import sys
+import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Export library path
-import os, sys
+rootname = "mesoscopic-functional-connectivity"
 thispath = os.path.dirname(os.path.abspath(__file__))
-parpath = os.path.abspath(os.path.join(thispath, os.pardir))
-sys.path.append(os.path.join(parpath, 'lib/'))
+rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
+print("Appending project path", rootpath)
+sys.path.append(rootpath)
 
-from matlab.matlab_yaro_lib import read_lvm
+from codes.lib.data_io.yaro.yaro_data_read import read_lvm
 
 # Read LVM file from command line
 inputpath = sys.argv[1]

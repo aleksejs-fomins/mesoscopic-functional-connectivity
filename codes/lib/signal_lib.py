@@ -2,6 +2,8 @@ import numpy as np
 import bisect
 from scipy import interpolate
 
+from codes.lib.aux_functions import slice_sorted
+
 
 def gaussian(mu, s2):
     return np.exp(- mu**2 / (2 * s2))
@@ -9,7 +11,7 @@ def gaussian(mu, s2):
 
 # Compute discretized exponential decay convolution
 # Works with multidimensional arrays, as long as shapes are the same
-def approxDelayConv(data, tau, dt):
+def approx_decay_conv(data, tau, dt):
     dataShape = data.shape
     nTimesTmp = dataShape[0] + 1   # Temporary data 1 longer because recursive formula depends on past
     tmpShape = (nTimesTmp, ) + dataShape[1:]
@@ -29,12 +31,28 @@ def approxDelayConv(data, tau, dt):
 #     return np.multiply(x < delta, 1.0) + np.multiply(x >= delta, np.exp(-(x-delta)/tau))
 
 
-def trunc_idx(x1, xmin, xmax):
-    l = bisect.bisect_left(x1, xmin)
-    r = bisect.bisect_right(x1, xmax)
-    return l, r
+# Downsample uniformly-spaced points by grouping them together and taking averages
+# * Advantage is that there is no overlap between points
+# * Disadvantage is that the options are limited to just a few values of nt
+#
+# - By convention, truncate tail if number of points is not divisible by nt.
+#   It is preferential to lose the tail than to have non-uniform time spacing
+def downsample_int(x1, y1, nt):
+    nTimesOrig = len(x1)
+    nTimesFinal = nTimesOrig // nt
+    x2 = np.zeros(nTimesFinal)
+    y2 = np.zeros(nTimesFinal)
+
+    for i in range(nTimesFinal):
+        l, r = i*nt, (i+1)*nt
+        x2[i] = np.mean(x1[l:r])
+        y2[i] = np.mean(y1[l:r])
+
+    return x2, y2
 
 
+# Kernel for gaussian downsampling
+# Can later downsample any dataset with exactly the same sampling points simply multiplying it by the kernel
 def resample_kernel(x1, x2, sig2):
     # Each downsampled val is average of all original val weighted by proximity kernel
     n1 = x1.shape[0]
@@ -50,6 +68,8 @@ def resample_kernel(x1, x2, sig2):
     return W
 
 
+# General resampling
+# Switches between downsampling and upsampling
 def resample(x1, y1, x2, param):
     N2 = len(x2)
     y2 = np.zeros(N2)
@@ -80,7 +100,7 @@ def resample(x1, y1, x2, param):
                 w_r = x2[i2] + 0.5 * window_size
 
                 # Find points of original dataset to average
-                i1_l, i1_r = trunc_idx(x1, w_l, w_r)
+                i1_l, i1_r = slice_sorted(x1, [w_l, w_r])
                 # i1_l = np.max([int(np.ceil((w_l - x1[0]) / DX1)), 0])
                 # i1_r = np.min([int(np.floor((w_r - x1[0]) / DX1)), N1])
 
