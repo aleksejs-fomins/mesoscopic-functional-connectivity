@@ -70,6 +70,14 @@ def analyse_network(data, library, method, settings):
         raise ValueError("Unexpected library", library)
 
 
+def fc_single_target(iTrg, data, library, method, settings):
+    # Preprocess data if necessary
+    dataPreprocessed = preprocess_data(data, library, settings)
+
+    # Compute single target FC for preprocessed data
+    return analyse_single_target(iTrg, dataPreprocessed, library, method, settings)
+
+
 # Parallelize a FC estimate over targets
 def fc_parallel_target(data, library, method, settings, serial=False, nCore=None):
     # Get number of nodes

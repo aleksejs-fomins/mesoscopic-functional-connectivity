@@ -18,7 +18,7 @@ print("Appended root directory", rootpath)
 # User libraries
 from codes.lib.aux_functions import mem_now_as_str
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
-from codes.lib.fc.idtxl_wrapper import analyse_single_target
+from codes.lib.fc.fc_generic import fc_single_target
 
 ##############################
 #  Paths
@@ -59,7 +59,7 @@ idtxlSettings = {
 }
 
 # Returns [3 x nSource]
-rez = analyse_single_target(iTrg, dataSweep, method, idtxlSettings)
+rez = fc_single_target(iTrg, data, "idtxl", method, idtxlSettings)
 
 #######################
 # Save results to file
