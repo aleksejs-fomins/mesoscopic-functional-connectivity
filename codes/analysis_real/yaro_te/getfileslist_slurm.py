@@ -114,4 +114,4 @@ outfname = 'slurmtasks.txt'
 print("Writing", len(taskIdx2task), "tasks to", outfname)
 with open(outfname, 'w') as f:
     for task in taskIdx2task:
-        f.write(",".join(str(el) for el in task))
+        f.write(",".join(str(el) for el in task) + "\n")
