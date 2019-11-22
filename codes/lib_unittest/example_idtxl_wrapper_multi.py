@@ -9,9 +9,8 @@ rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
 print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
-from codes.lib.fc.corr_lib import corr3D
-from codes.lib.fc.idtxl_wrapper import idtxlParallelCPUMulti
-from codes.lib.models.test_lib import dynsys, dynsys_gettrueconn
+from codes.lib.fc.fc_generic import fc_parallel_multiparam_target
+from codes.lib.models.test_lib import dynsys
 
 
 ############################
@@ -40,7 +39,6 @@ print("Generated data of shape", data.shape)
 # IDTxl parameters
 idtxlParam = {
     'dim_order'       : 'rsp',
-    'method'          : 'BivariateTE',
     'cmi_estimator'   : 'JidtGaussianCMI',
     'max_lag_sources' : 5,
     'min_lag_sources' : 1
@@ -48,15 +46,18 @@ idtxlParam = {
 
 
 nSweep = 10
+windowSize = 50
 
 methods = ['BivariateTE', 'MultivariateTE']
-dataSweep = [data.transpose((0, 2, 1))[:, i:i+50, :] for i in range(nSweep)]
+dataSweep = [data.transpose((0, 2, 1))[:, i:i+windowSize, :] for i in range(nSweep)]
 
-results = idtxlParallelCPUMulti(dataSweep, idtxlParam, methods, NCore=4)
+results = fc_parallel_multiparam_target(dataSweep, "idtxl", methods, idtxlParam, nCore=None)
 
 fig, ax = plt.subplots(nrows=nSweep, ncols=2)
+fig.suptitle("TE computation for several windows of the data")
 for iMethod, method in enumerate(methods):
     ax[0][iMethod].set_title(method)
     for iSweep in range(nSweep):
+        ax[iSweep][0].set_ylabel("window " + str(iSweep) + ":" + str(iSweep+windowSize))
         ax[iSweep][iMethod].imshow(results[method][iSweep][0])
 plt.show()
