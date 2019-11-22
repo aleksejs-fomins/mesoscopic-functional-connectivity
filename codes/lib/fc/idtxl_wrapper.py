@@ -94,8 +94,9 @@ def parse_results(results, nNode, method):
 @redirect_stdout
 def analyse_single_target(iTrg, data, method, settings):
     # Get number of nodes
-    idxNodeShape = settings['dim_order'].index("p")
-    nNode = data.shape[idxNodeShape]
+    # idxNodeShape = settings['dim_order'].index("p")
+    # nNode = data.shape[idxNodeShape]
+    nNode = data.n_processes
 
     # Perform analysis
     analysisClass = get_analysis_class(method)
@@ -110,9 +111,9 @@ def analyse_single_target(iTrg, data, method, settings):
 #@jpype_sync_thread
 @redirect_stdout
 def analyse_network(data, method, settings):
-    # Get number of nodes
-    idxNodeShape = settings['dim_order'].index("p")
-    nNode = data.shape[idxNodeShape]
+    # idxNodeShape = settings['dim_order'].index("p")
+    # nNode = data.shape[idxNodeShape]
+    nNode = data.n_processes
 
     # Perform analysis
     analysisClass = get_analysis_class(method)
