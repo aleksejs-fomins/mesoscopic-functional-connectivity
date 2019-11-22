@@ -1,8 +1,8 @@
 Stated   | Finished | Pr | Eff | Task          | Subtask
 --------------------------------------------------------------------------------------
 20.11.19 |          | 5  |     | Test          | Plot simulated data, check it looks reasonable
-20.11.19 |          | 5  |     | Test          | IDTxl-wrapper
-20.11.19 |          | 5  |     | Test          | IDTxl-wrapper-multi
+20.11.19 | 22.11.19 | 5  | 10m | Test          | IDTxl-wrapper
+20.11.19 | 22.11.19 | 5  | 10m | Test          | IDTxl-wrapper-multi
 20.11.19 |          | 5  |     | Test          | FC-static
 20.11.19 |          | 5  |     | Test          | FC-dynamic
 20.11.19 |          | 5  |     | Test          | Simulated :: Imgs :: BTE with H2 curve

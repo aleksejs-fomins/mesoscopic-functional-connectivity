@@ -4,6 +4,9 @@
   2. For each file, on 1 core do 1 target, all sweeps
 '''
 
+###############################
+#  Libraries
+###############################
 
 # Standard libraries
 import os,sys
@@ -19,7 +22,13 @@ print("Appended root directory", rootpath)
 
 # User libraries
 from codes.lib.data_io.os_lib import getfiles_walk
-from codes.lib.data_io.qt_wrapper import gui_fpath
+from codes.lib.data_io.qt_wrapper import gui_fpath, gui_fname
+from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
+
+
+###############################
+#  Select all files to process
+###############################
 
 # Step 1: Get all data files
 thisFolder = './'
@@ -32,30 +41,74 @@ while thisFolder != '':
 
 print("Total Folders Found", len(allFolders))
 
+###############################
+#  Potentially exclude some files
+###############################
 
-# # Exclude some data that is already done or bad
-# with open('excl_folders.json', 'r') as f:
-#    excl_folders = json.load(f)['excl_folders']
-#
-# allFoldersFiltered = []
-# for folder in allFolders:
-#   if not np.any([excl in folder for excl in excl_folders]):
-#      allFoldersFiltered += [folder]
-#   else:
-#      print("Excluded folder", folder)
-# print("Total Folders after exclusion", len(allFoldersFiltered))
-# allFolders = allFoldersFiltered
+excl_json = gui_fname("JSON file with folders to exclude", "./", "JSON (*.json)")
+if excl_json != '':
+    # Exclude some data that is already done or bad
+    with open('excl_folders.json', 'r') as f:
+       excl_folders = json.load(f)['excl_folders']
+
+    allFoldersFiltered = []
+    for folder in allFolders:
+      if not np.any([excl in folder for excl in excl_folders]):
+         allFoldersFiltered += [folder]
+      else:
+         print("Excluded folder", folder)
+    print("Total Folders after exclusion", len(allFoldersFiltered))
+    allFolders = allFoldersFiltered
 
 
-# Step 2: Split files among processes. Files are sorted in priority order, because we need some results sooner than others
+###############################
+#  Construct all tasks
+###############################
+
+params = {
+    #"methods"    : ["BivariateMI", "MultivariateMI"],
+    "methods"     :  ["BivariateTE", "MultivariateTE"],
+    "trial_types" : ["iGO", "iNOGO"],
+    "window"      : 4,
+    'min_lag_sources': 1,
+    'max_lag_sources': 3
+}
 
 taskIdx2task = []
-
 for fpath in allFolders:
-    nChannlel = 48 if "mvg_48" in fpath else 12
+    data, behaviour, performance = read_neuro_perf(fpath)
 
-    for iTrg in range(nChannlel):
-        taskIdx2task += [(fpath, iTrg)]
+    # Get parameters
+    nTrials, nTimes, nChannels = data.shape
+    print("Processing file (nTrials, nTimes, nChannels)=", data.shape)
+
+    # Crop nTimes
+    nTimes = np.min(201, nTimes)
+    sweepRange = np.arange(nTimes - params["window"] + 1)
+
+    for trialType in params['trial_types']:
+        nTrialsEff = len(behaviour[trialType])
+
+        if nTrialsEff < 50:
+            print("-- Skipping", trialType, "because nTrials=", nTrialsEff)
+        else:
+            for sweep in sweepRange:
+                for method in params["methods"]:
+                    for iTrg in range(nChannels):
+                        taskIdx2task += [(
+                            fpath,
+                            params["window"],
+                            params["min_lag_sources"],
+                            params["max_lag_sources"],
+                            trialType,
+                            sweep,
+                            method,
+                            iTrg)]
+
+
+###############################
+#  Construct all tasks
+###############################
 
 outfname = 'slurmtasks.json'
 print("Writing", len(taskIdx2task), "tasks to", outfname)
