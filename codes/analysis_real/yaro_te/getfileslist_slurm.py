@@ -83,7 +83,7 @@ for fpath in allFolders:
     print("Processing file (nTrials, nTimes, nChannels)=", data.shape)
 
     # Crop nTimes
-    nTimes = np.min(201, nTimes)
+    nTimes = np.min([201, nTimes])
     sweepRange = np.arange(nTimes - params["window"] + 1)
 
     for trialType in params['trial_types']:
@@ -101,7 +101,7 @@ for fpath in allFolders:
                             params["min_lag_sources"],
                             params["max_lag_sources"],
                             trialType,
-                            sweep,
+                            int(sweep),
                             method,
                             iTrg)]
 
