@@ -45,7 +45,9 @@ def get_line_file(fname, idxline):
 tasksLine = get_line_file(tasks_fname, thisTaskIdx)
 
 folderPathName, window, minlag, maxlag, trialType, sweep, method, iTrg = tasksLine.split(",")
+window = int(window)
 minlag = int(minlag)
+maxlag = int(maxlag)
 sweep = int(sweep)
 iTrg = int(iTrg)
 
