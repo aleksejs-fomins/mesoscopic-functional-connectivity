@@ -110,7 +110,8 @@ for fpath in allFolders:
 #  Construct all tasks
 ###############################
 
-outfname = 'slurmtasks.json'
+outfname = 'slurmtasks.txt'
 print("Writing", len(taskIdx2task), "tasks to", outfname)
 with open(outfname, 'w') as f:
-    json.dump(taskIdx2task, f, indent=4, sort_keys=True)
+    for task in taskIdx2task:
+        f.write(",".join(str(el) for el in task))

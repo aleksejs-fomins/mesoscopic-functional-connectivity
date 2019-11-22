@@ -25,17 +25,29 @@ from codes.lib.fc.fc_generic import fc_single_target
 ##############################
 in_path = "/home/cluster/alfomi/work/mesoscopic-functional-connectivity/codes/analysis_real/yaro_te/"
 out_path = "/scratch/alfomi/idtxl_results_kraskov/"
-json_fname = os.path.join(in_path, "slurmtasks.json")
+# json_fname = os.path.join(in_path, "slurmtasks.json")
+tasks_fname = os.path.join(in_path, "slurmtasks.txt")
+
+# with open(json_fname, 'r') as f:
+#     tasks = json.load(f)
 
 ##############################
-#  Tasks
+# Extract this task from file
 ##############################
 thisTaskIdx = int(sys.argv[1])
 
-with open(json_fname, 'r') as f:
-    tasks = json.load(f)
+def get_line_file(fname, idxline):
+    with open(fname, 'r') as f:
+        for i, line in enumerate(f):
+            if i == idxline:
+                return line
 
-folderPathName, window, minlag, maxlag, trialType, sweep, method, iTrg = tasks[thisTaskIdx]
+tasksLine = get_line_file(tasks_fname, thisTaskIdx)
+
+folderPathName, window, minlag, maxlag, trialType, sweep, method, iTrg = tasksLine.split(",")
+minlag = int(minlag)
+sweep = int(sweep)
+iTrg = int(iTrg)
 
 #############################
 # Reading data and selecting
