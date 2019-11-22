@@ -9,9 +9,8 @@ rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
 print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
-from codes.lib.fc.corr_lib import corr3D
-from codes.lib.fc.idtxl_wrapper import idtxlParallelCPU
-from codes.lib.models.test_lib import dynsys, dynsys_gettrueconn
+from codes.lib.fc.fc_generic import fc_parallel_target
+from codes.lib.models.test_lib import dynsys
 
 
 ############################
@@ -40,14 +39,12 @@ print("Generated data of shape", data.shape)
 # IDTxl parameters
 idtxlParam = {
     'dim_order'       : 'rsp',
-    'method'          : 'BivariateTE',
     'cmi_estimator'   : 'JidtGaussianCMI',
     'max_lag_sources' : 5,
     'min_lag_sources' : 1
 }
 
-
-te, lag, p = idtxlParallelCPU(data.transpose((0, 2, 1))[:, -200:, :], idtxlParam, NCore=4)
+te, lag, p = fc_parallel_target(data.transpose((0, 2, 1))[:, -200:, :], "idtxl", 'BivariateTE', idtxlParam, serial=False, nCore=None)
 
 fig, ax = plt.subplots(ncols=3)
 ax[0].imshow(te)
