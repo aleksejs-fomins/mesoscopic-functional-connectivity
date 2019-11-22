@@ -19,7 +19,7 @@ print("Appended root directory", rootpath)
 from codes.lib.aux_functions import mem_now_as_str
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
 from codes.lib.signal_lib import resample
-from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti
+from codes.lib.fc.idtxl_wrapper import idtxlParallelCPUMulti
 
 
 print("Mem:", mem_now_as_str(), "- Start of code")

@@ -10,7 +10,7 @@ print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 from codes.lib.fc.corr_lib import corr3D
-from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti
+from codes.lib.fc.idtxl_wrapper import idtxlParallelCPUMulti
 from codes.lib.models.test_lib import dynsys, dynsys_gettrueconn
 
 

@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 from time import gmtime, strftime
 import bisect
 import psutil
@@ -34,3 +35,8 @@ def slice_sorted(data, rng):
     return [
         bisect.bisect_left(data, rng[0]),
         bisect.bisect_right(data, rng[1])]
+
+def perm_map(A, B):
+    aArr = np.array(A)
+    bArr = np.array(B)
+    return np.where(aArr.reshape(aArr.size, 1) == bArr)[1]

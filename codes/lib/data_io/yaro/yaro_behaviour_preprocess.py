@@ -1,7 +1,7 @@
 import numpy as np
 
 from codes.lib.aux_functions import slice_sorted
-from codes.lib.signal_lib import resample
+from codes.lib.signal_lib import resample, resample_kernel
 
 
 def resample_lick(f_lick, neuro, behaviour, TARGET_TIMES, TARGET_FREQ):
@@ -13,6 +13,8 @@ def resample_lick(f_lick, neuro, behaviour, TARGET_TIMES, TARGET_FREQ):
     nTrialsNeuro = neuro.shape[0]
     
     TARGET_NTIMES = len(TARGET_TIMES)
+    wResample = resample_kernel(tLicksTrunc, TARGET_TIMES, param_resample['ker_sig2'])
+
     data_lick = np.zeros((nTrialsNeuro, TARGET_NTIMES))
     keymap_lick = {
         'iGO'    : 'licks_go',
@@ -72,7 +74,8 @@ def resample_lick(f_lick, neuro, behaviour, TARGET_TIMES, TARGET_FREQ):
             # Note MATLAB index in behaviour is +1
             for iSubTrial, iTrialMATLAB in enumerate(behavToArray(behaviour[k])):
                 if iTrialMATLAB-1 < nTrialsNeuro:
-                    data_lick[iTrialMATLAB-1] = resample(tLicksTrunc, lick_trunc[:, iSubTrial], TARGET_TIMES, param_resample)
+                    data_lick[iTrialMATLAB - 1] = wResample.dot(lick_trunc[:, iSubTrial])
+                    #data_lick[iTrialMATLAB-1] = resample(tLicksTrunc, lick_trunc[:, iSubTrial], TARGET_TIMES, param_resample)
     return data_lick
 
 
@@ -98,9 +101,12 @@ def resample_paw(f_paw, TARGET_TIMES, TARGET_FREQ):
 
     if f_paw['freqPaw'] < TARGET_FREQ:
         param_resample = {'method' : 'interpolative', 'kind' : 'cubic'}
+        data_paw = np.array([resample(paw_times_tmp, d, TARGET_TIMES, param_resample) for d in data_paw])
     else:
         param_resample = {'method' : 'averaging', 'kind' : 'kernel', 'ker_sig2' : (0.5/TARGET_FREQ)**2}
-    data_paw = np.array([resample(paw_times_tmp, data_paw[iTrial], TARGET_TIMES, param_resample) for iTrial in range(nTrials)])
+        wResample = resample_kernel(paw_times_tmp, TARGET_TIMES, param_resample['ker_sig2'])
+        data_paw = data_paw.dot(wResample.T)
+        #data_paw = np.array([resample(paw_times_tmp, data_paw[iTrial], TARGET_TIMES, param_resample) for iTrial in range(nTrials)])
 
     # Normalize
     data_paw /= np.max(data_paw)
@@ -123,6 +129,8 @@ def resample_whisk(f_whisk, TARGET_TIMES):
 
     # Resample
     param_resample = {'method' : 'averaging', 'kind' : 'kernel', 'ker_sig2' : (4/200)**2}
-    f_whisk['whiskAbsVelocity'] = np.array([resample(f_whisk['tWhisk'], f_whisk['whiskAbsVelocity'][:, iTrial], TARGET_TIMES, param_resample) for iTrial in range(nTrials)])
+    wResample = resample_kernel(f_whisk['tWhisk'], TARGET_TIMES, param_resample['ker_sig2'])
+    f_whisk['whiskAbsVelocity'] = wResample.dot(f_whisk['whiskAbsVelocity']).T
+    #f_whisk['whiskAbsVelocity'] = np.array([resample(f_whisk['tWhisk'], f_whisk['whiskAbsVelocity'][:, iTrial], TARGET_TIMES, param_resample) for iTrial in range(nTrials)])
 
     return f_whisk['whiskAbsVelocity']

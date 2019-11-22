@@ -1,6 +1,9 @@
 import numpy as np
 import scipy.stats
 
+from codes.lib.aux_functions import perm_map
+from codes.lib.stat_lib import bonferroni_correction
+
 def corr_significance(c, nData):
     t = c * np.sqrt((nData - 2) / (1 - c**2))
     t[t == np.nan] = np.inf
@@ -38,30 +41,39 @@ def corr3D(x3D, y3D=None, est='corr'):
     return corr(x2D, y2D, est=est)
 
 
-# Compute cross-correlation for all shifts in [delay_min, delay_max]
-# For each pair return largest corr by absolute value, and shift value
-# * Data - 2D matrix [channel x time]
-# * Data - 3D matrix [channel x time x trial]
-#   For fixed lag, trial and channel pair:
-#    - shift time by lag and get paired overlap
-#    - concatenate overlaps for all trials
-#    - compute corr over concatenation
-def crossCorr(data, lagMin, lagMax, est='corr'):
-    nNode = data.shape[0]
-    nTime = data.shape[1]
+def crossCorr(data, settings, est='corr'):
+    '''
+    Compute cross-correlation of multivariate dataset for a range of lags
+
+    :param data: 2D or 3D matrix
+    :param settings: A dictionary. 'min_lag_sources' and 'max_lag_sources' determine lag range.
+    :param est: Estimator name. Can be 'corr' or 'spr' for cross-correlation or spearmann-rank
+    :return: A matrix [3 x nSource x nTarget], where 3 stands for [Corr Value, Max Lag, p-value]
+    '''
+
+    # Parse settings
     haveTrials = len(data.shape) > 2
-        
+    lagMin = settings['min_lag_sources']
+    lagMax = settings['max_lag_sources']
+
+    # Transpose dataset into comfortable form
+    if haveTrials:
+        dataOrd = data.transpose(perm_map(settings['dim_order'], 'psr'))
+    else:
+        dataOrd = data.transpose(perm_map(settings['dim_order'], 'ps'))
+
+    # Extract dimensions
+    nNode, nTime = data.shape[:2]
+
     # Check that number of timesteps is sufficient to estimate lagMax
     if nTime <= lagMax:
         raise ValueError('max lag', lagMax, 'cannot be estimated for number of timesteps', nTime)
-        
-    matCorr = np.eye(nNode)
-    matLag = np.zeros((nNode, nNode))
-    matP = np.zeros((nNode, nNode))
+
+    rezMat = np.zeros((3, nNode, nNode))
     
     for lag in range(lagMin, lagMax+1):
-        xx = data[:, lag:]
-        yy = data[:, :nTime-lag]
+        xx = dataOrd[:, lag:]
+        yy = dataOrd[:, :nTime-lag]
 
         if haveTrials:
             corrThis, pThis = corr3D(xx, yy, est=est)
@@ -73,9 +85,13 @@ def crossCorr(data, lagMin, lagMax, est='corr'):
         pThis    = pThis[nNode:, :nNode]
 
         # Keep estimate and lag if it has largest absolute value so far
-        idxCorr = np.abs(corrThis) > np.abs(matCorr)
-        matCorr[idxCorr] = corrThis[idxCorr]
-        matLag[idxCorr] = lag
-        matP[idxCorr] = pThis[idxCorr]
+        idxCorr = np.abs(corrThis) > np.abs(rezMat[0])
+        rezMat[0, idxCorr] = corrThis[idxCorr]
+        rezMat[1, idxCorr] = lag
+        rezMat[2, idxCorr] = pThis[idxCorr]
+
+    # Apply bonferroni correction due to multiple lags test
+    nHypothesesLag = lagMax - lagMin + 1
+    rezMat[2] = bonferroni_correction(rezMat[2], nHypothesesLag)
                         
-    return matCorr, matLag, matP
+    return rezMat

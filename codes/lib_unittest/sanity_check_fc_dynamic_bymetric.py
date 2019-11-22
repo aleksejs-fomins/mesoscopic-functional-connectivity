@@ -10,27 +10,12 @@ rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
 print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
-from codes.lib.fc.corr_lib import crossCorr
-from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPU
+from codes.lib.fc.fc_generic import fc_parallel
+
 
 # IDTxl parameters
-def getIDTxlSettings(est, method):
-    return {
-        'dim_order'       : 'rsp',
-        'method'          : method,
-        'cmi_estimator'   : est,
-        'max_lag_sources' : 1,
-        'min_lag_sources' : 1
-    }
-
-algFuncDict = {
-    "Corr"          : lambda data: crossCorr(data.transpose((0, 2, 1)), 1, 1, est='corr'),
-    "Spr"           : lambda data: crossCorr(data.transpose((0, 2, 1)), 1, 1, est='spr'),
-    "BMI_Gaussian"  : lambda data: idtxlParallelCPU(data.transpose((1, 2, 0)), getIDTxlSettings('JidtGaussianCMI', 'BivariateMI')),
-    "BMI_Kraskov"   : lambda data: idtxlParallelCPU(data.transpose((1, 2, 0)), getIDTxlSettings('JidtKraskovCMI',  'BivariateMI')),
-    "BTE_Gaussian"  : lambda data: idtxlParallelCPU(data.transpose((1, 2, 0)), getIDTxlSettings('JidtGaussianCMI', 'BivariateTE')),
-    "BTE_Kraskov"   : lambda data: idtxlParallelCPU(data.transpose((1, 2, 0)), getIDTxlSettings('JidtKraskovCMI',  'BivariateTE'))
-}
+def parm_append_cmi(param, cmiEst):
+    return {**param, **{'cmi_estimator'   : cmiEst}}
 
 
 def generate_data(nTrial, nData, isSelfPredictive, isLinear, isShifted):
@@ -58,69 +43,57 @@ def generate_data(nTrial, nData, isSelfPredictive, isLinear, isShifted):
         return np.array([x[:, :-1], y[:, :-1]])
 
 
-# Test Linear
-nTime = 1000
-nTrial = 5
-nAlg = len(algFuncDict)
+# Plot phase-space of different shifts of both variables wrt each other. Produces one plot [nSWEEP x 5]
+class phaseSpaceFigures():
+    def __init__(self, nSweep):
+        self.fig1, self.axData = plt.subplots(nrows=nSweep, ncols=5, tight_layout=True)
+        self.fig1.suptitle("Phase space plots")
+        self.axData[0, 0].set_title("Self-prediction, data1")
+        self.axData[0, 1].set_title("Self-prediction, data2")
+        self.axData[0, 2].set_title("cross-prediction, lag=0")
+        self.axData[0, 3].set_title("cross-prediction 1->2, lag=1")
+        self.axData[0, 4].set_title("cross-prediction 2->1, lag=1")
 
-performanceTimes = []
-testPValues = []
+    def addrow(self, data, dataLabel):
+        xFlatPre = data[0, :, :-1].flatten()
+        yFlatPre = data[1, :, :-1].flatten()
+        xFlatPost = data[0, :, 1:].flatten()
+        yFlatPost = data[1, :, 1:].flatten()
 
-
-
-fig1, axData = plt.subplots(nrows=8, ncols=5, tight_layout=True)
-fig1.suptitle("Phase space plots")
-axData[0, 0].set_title("Self-prediction, data1")
-axData[0, 1].set_title("Self-prediction, data2")
-axData[0, 2].set_title("cross-prediction, lag=0")
-axData[0, 3].set_title("cross-prediction 1->2, lag=1")
-axData[0, 4].set_title("cross-prediction 2->1, lag=1")
-
-metricFigures = []
-for iRez, rezName in enumerate(["values", "lags", "p-values"]):
-    metricFigures += [plt.subplots(nrows=8, ncols=nAlg, tight_layout=True)]
-    metricFigures[-1][0].suptitle("Functional Connectivity " + rezName)
-
-    for iAlg, algName in enumerate(algFuncDict.keys()):
-        metricFigures[-1][1][0, iAlg].set_title(algName)
+        self.axData[iSweep, 0].set_ylabel(dataLabel)
+        self.axData[iSweep, 0].plot(xFlatPre, xFlatPost, '.')
+        self.axData[iSweep, 1].plot(yFlatPre, yFlatPost, '.')
+        self.axData[iSweep, 2].plot(xFlatPre, yFlatPre, '.')
+        self.axData[iSweep, 3].plot(xFlatPre, yFlatPost, '.')
+        self.axData[iSweep, 4].plot(yFlatPre, xFlatPost, '.')
 
 
-varSweep = [(p,d,s) for p in ["incr", "random"] for d in ["linear", "circular"] for s in ["matching", "shifted"]]
+# Plot FC, LAG, and P-VAL matrices for each SWEEP and ALG combination. Produces 3 plots
+class metricFigures():
+    def __init__(self, figKeys, nSweep, algKeys):
+        nAlg = len(algKeys)
 
-for iSweep, var in enumerate(varSweep):
-    predictName, dataName, shiftName = var
-    data = generate_data(nTrial, nTime, predictName=="incr", dataName == "linear", shiftName=="shifted")
-    dataLabel = predictName + "_" + dataName + "_" + shiftName
+        self.figs = []
+        self.axes = []
+        for figKey in figKeys:
+            fig, ax = plt.subplots(nrows=nSweep, ncols=nAlg, tight_layout=True)
+            fig.suptitle("Functional Connectivity " + figKey)
 
-    xFlatPre = data[0, :, :-1].flatten()
-    yFlatPre = data[1, :, :-1].flatten()
-    xFlatPost = data[0, :, 1:].flatten()
-    yFlatPost = data[1, :, 1:].flatten()
+            for iAlg, algKey in enumerate(algKeys):
+                ax[0, iAlg].set_title(algKey)
 
-    axData[iSweep, 0].set_ylabel(dataLabel)
-    axData[iSweep, 0].plot(xFlatPre, xFlatPost, '.')
-    axData[iSweep, 1].plot(yFlatPre, yFlatPost, '.')
-    axData[iSweep, 2].plot(xFlatPre, yFlatPre, '.')
-    axData[iSweep, 3].plot(xFlatPre, yFlatPost, '.')
-    axData[iSweep, 4].plot(yFlatPre, xFlatPost, '.')
-
-    for metricFigure in metricFigures:
-        metricFigure[1][iSweep, 0].set_ylabel(dataLabel)
+            self.figs += [fig]
+            self.axes += [ax]
 
 
-    for iAlg, (algName, algFunc) in enumerate(algFuncDict.items()):
-        resultLabel = dataLabel + "_" + algName
-        print("computing", resultLabel)
+    def set_row_label(self, iSweep, dataLabel):
+        for ax in self.axes:
+            ax[iSweep, 0].set_ylabel(dataLabel)
 
-        # Compute metric
-        tStart = time()
-        rez = algFunc(data)
-        performanceTimes += [(var, algName, time() - tStart)]
 
-        # Plot results
-        for iRez, metricFigure in enumerate(metricFigures):
-            rezAbs = np.round(np.abs(rez[iRez]), 3)
-            fig, ax = metricFigure
+    def addcell(self, rezLst, iSweep, iAlg):
+        for iRez, (rez, fig, ax) in enumerate(zip(rezLst, self.figs, self.axes)):
+            rezAbs = np.round(np.abs(rez), 3)
             if iRez == 0:
                 ax[iSweep, iAlg].imshow(rezAbs, vmin=0)
             else:
@@ -128,6 +101,75 @@ for iSweep, var in enumerate(varSweep):
 
             for (j, i), label in np.ndenumerate(rezAbs):
                 ax[iSweep, iAlg].text(i, j, label, ha='center', va='center', color='r')
+
+
+########################
+# Generic parameters
+########################
+param = {
+    'dim_order'       : 'prs',
+    'max_lag_sources' : 1,
+    'min_lag_sources' : 1
+}
+
+# Test Linear
+nCore = 4
+nTime = 1000
+nTrial = 5
+
+########################
+# Sweep parameters
+########################
+
+algDict = {
+    "Libraries"    : ["corr", "corr", "idtxl", "idtxl", "idtxl", "idtxl"],
+    "Estimators"   : ["corr", "spr", "BivariateMI", "BivariateMI", "BivariateTE", "BivariateTE"],
+    "CMI"          : [None, None, "JidtGaussianCMI", "JidtKraskovCMI", "JidtGaussianCMI", "JidtKraskovCMI"],
+    "parallel_trg" : [False, False, True, True, True, True]
+}
+
+algNames = [l+'_'+e+'_'+cmi if cmi is not None else l+'_'+e for l, e, cmi in zip(*algDict.values())]
+
+varSweep = [(p,d,s) for p in ["incr", "random"] for d in ["linear", "circular"] for s in ["matching", "shifted"]]
+nSweep = len(varSweep)
+
+########################
+# Figures
+########################
+
+psFigs = phaseSpaceFigures(nSweep)
+metricFigs = metricFigures(["values", "lags", "p-values"], nSweep, algNames)
+
+
+########################
+# Sweep loop
+########################
+
+performanceTimes = []
+testPValues = []
+
+for iSweep, var in enumerate(varSweep):
+    predictName, dataName, shiftName = var
+    data = generate_data(nTrial, nTime, predictName=="incr", dataName == "linear", shiftName=="shifted")
+    dataLabel = predictName + "_" + dataName + "_" + shiftName
+    psFigs.addrow(data, dataLabel)
+    metricFigs.set_row_label(iSweep, dataLabel)
+
+    for iAlg, (algName, library, estimator, cmi, parTarget) in enumerate(zip(algNames, *algDict.values())):
+        # Get label
+        resultLabel = dataLabel + "_" + algName
+        print("computing", resultLabel)
+
+        # Get settings
+        paramThis = param if cmi is None else parm_append_cmi(param, cmi)
+
+        # Compute metric
+        tStart = time()
+        rez = fc_parallel(data, library, estimator, paramThis, parTarget=parTarget, serial=False, nCore=nCore)
+        performanceTimes += [(var, algName, time() - tStart)]
+
+        # Plot results
+        metricFigs.addcell(rez, iSweep, iAlg)
 
         # Report significance of off-diagonal link
         testPValues += [(resultLabel, rez[2][0, 1])]

@@ -33,7 +33,7 @@ from codes.lib.signal_lib import resample
 from codes.lib.data_io.os_lib import getfiles_walk
 from codes.lib.data_io.qt_wrapper import gui_fpath
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
-from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti, idtxlResultsParse
+from codes.lib.fc.idtxl_wrapper import idtxlParallelCPUMulti, parse_results
 
 
 
@@ -151,7 +151,7 @@ for iFile, (folderName, folderPathName) in enumerate(datapaths.items()):
                 
                 for iRange in data_range:
                     te_data[..., iRange + idtxl_settings["max_lag_sources"]] = np.array(
-                        idtxlResultsParse(rez[iMethod][iRange], nChannels, method=method, storage='matrix')
+                        parse_results(rez[iMethod][iRange], nChannels, method=method, storage='matrix')
                     )
 
                 #######################

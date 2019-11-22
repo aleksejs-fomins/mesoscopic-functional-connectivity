@@ -5,9 +5,9 @@ import pandas as pd
 
 from codes.lib.aux_functions import merge_dicts
 from codes.lib.signal_lib import resample
-from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti, idtxlParallelCPU
+from codes.lib.fc.fc_generic import fc_parallel_multiparam
 from codes.lib.plots.accuracy import fc_accuracy_plots
-from codes.lib.models.false_negative_transform import makedata_snr_observational, makedata_snr_occurence
+from codes.lib.models.false_negative_boost import makedata_snr_observational, makedata_snr_occurence
 
 
 def parse_file_names_pandas(dataFileNames):
@@ -60,8 +60,52 @@ def downsample_times(data, timesDS, paramDS):
                 data_downsampled[iTr, :, iNode] = resample(fakeTimesOrig, data[iTr, :, iNode], fakeTimesNew, paramDS)
 
 
-def analysis_width_depth(dataFileNames, idtxlSettings, methods, pTHR=0.01, figExt='.svg', NCore=None):
+'''
+param : {
+    'library' ::  Library to use for estimation ('corr', 'idtxl')
+    'methods' ::  Methods to use for estimation ('corr', 'spr', 'BivariateMi')
+    'pTHR'    ::  P-value at which to threshold results for plotting
+    'figExt'  ::  Extension for saving figure ('.png', '.svg')
+    'parTrg'  ::  Whether to parallelize over targets (True, False)
+    'nCore'   ::  Number of cores to use for parallelization (int, or None for automatic detection)
+    'serial'  ::  Whether or not to parallelize code (True / False)
+    'paramLib' :: Library-specific parameters {
+        'min_lag_sources' :: min lag, int
+        'min_lag_sources' :: max lag, int
+        'dim_order'       :: Order of dimensions ('psr' <=> [nProcesses x nSamples x nRepetitions])
+    }
+}
+'''
+def reinit_param(param, minlag=None, maxlag=None):
+    paramThis = param.copy()
+    if minlag is not None:
+        paramThis['paramLib']['min_lag_sources'] = minlag
+    if maxlag is not None:
+        paramThis['paramLib']['max_lag_sources'] = maxlag
+    paramThis.setdefault('pTHR',   0.01)
+    paramThis.setdefault('figExt', '.svg')
+    paramThis.setdefault('parTrg', True)
+    paramThis.setdefault('nCore', None)
+    paramThis.setdefault('serial', False)
+    return paramThis
+
+
+# Shorthand to pass all parameters from dict to method
+def wrapper_multiparam(dataLst, param):
+    return fc_parallel_multiparam(
+        dataLst,
+        param['library'],
+        param['methods'],
+        param['paramLib'],
+        parTarget=param['parTrg'],
+        serial=param['serial'],
+        nCore=param['nCore']
+    )
+
+
+def analysis_width_depth(dataFileNames, param):
     fileInfoDf, fileParams = parse_file_names_pandas(dataFileNames)
+    paramThis = reinit_param(param)
 
     for analysis in fileParams['analysis']:
         for modelName in fileParams['model']:
@@ -85,20 +129,18 @@ def analysis_width_depth(dataFileNames, idtxlSettings, methods, pTHR=0.01, figEx
                     nDataEff += [expectedShape[0] * expectedShape[1]]
 
                 # Run calculation
-                rezIDTxl = idtxlParallelCPUMulti(dataLst, idtxlSettings, methods, NCore=NCore)
+                rezIDTxl = wrapper_multiparam(dataLst, paramThis)
 
-                for iMethod, method in enumerate(methods):
+                for iMethod, method in enumerate(paramThis['methods']):
                     fname_h5 = analysis + "_" + modelName + '_' + str(nNode) + '.h5'
-                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + paramThis['figExt']
                     teData = rezIDTxl[method].transpose((1,2,3,0))
-                    fc_accuracy_plots(nDataEff, teData, trueConn, method, pTHR, logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
+                    fc_accuracy_plots(nDataEff, teData, trueConn, method, paramThis['pTHR'], logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
 
-def analysis_snr(dataFileNames, idtxlSettings, methods, modelName, nStep, pTHR=0.01, figExt='.svg', NCore=None):
+def analysis_snr(dataFileNames, modelName, nStep, param):
     window = 6
-    idtxlSettingsThis = idtxlSettings.copy()
-    idtxlSettingsThis['min_lag_sources'] = 1
-    idtxlSettingsThis['max_lag_sources'] = 5
+    paramThis = reinit_param(param, 1, 5)
 
     # Set parameter ranges
     paramRangesDict = {
@@ -138,21 +180,19 @@ def analysis_snr(dataFileNames, idtxlSettings, methods, modelName, nStep, pTHR=0
                 dataLst = dataNoiseFuncDict[flavour](data[:, :window, :], paramRanges)
 
                 # Run calculation
-                rezIDTxl = idtxlParallelCPUMulti(dataLst, idtxlSettingsThis, methods, NCore=NCore)
+                rezIDTxl = wrapper_multiparam(dataLst, paramThis)
 
                 # Save to h5 and make plots
-                for iMethod, method in enumerate(methods):
+                for iMethod, method in enumerate(paramThis['methods']):
                     fname_h5 = "snr_" + flavour + '_' + modelName + '_' + str(nNode) + '_' + method
-                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + paramThis['figExt']
                     teData = rezIDTxl[method].transpose((1, 2, 3, 0))
 
-                    fc_accuracy_plots(paramRanges, teData, trueConn, method, pTHR, logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
+                    fc_accuracy_plots(paramRanges, teData, trueConn, method, paramThis['pTHR'], logx=True, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
 
-def analysis_window(dataFileNames, idtxlSettings, methods, wMin, wMax, pTHR=0.01, figExt='.svg', NCore=None):
-    idtxlSettingsThis = idtxlSettings.copy()
-    idtxlSettingsThis['min_lag_sources'] = 1
-    idtxlSettingsThis['max_lag_sources'] = 1
+def analysis_window(dataFileNames, wMin, wMax, param):
+    paramThis = reinit_param(param, 1, 1)
     windowRange = np.arange(wMin, wMax+1)
 
     analysis = 'typical'
@@ -175,20 +215,28 @@ def analysis_window(dataFileNames, idtxlSettings, methods, wMin, wMax, pTHR=0.01
                 data, trueConn = read_data_h5(fnameThis, modelName, expectedShape)
 
                 dataLst = [data[:, :window, :] for window in windowRange]
-                rezIDTxl = idtxlParallelCPUMulti(dataLst, idtxlSettingsThis, methods, NCore=NCore)
+
+                # Run calculation
+                rezIDTxl = fc_parallel_multiparam(
+                    dataLst,
+                    paramThis['library'],
+                    paramThis['methods'],
+                    paramThis['paramLib'],
+                    parTarget=paramThis['parTrg'],
+                    serial=paramThis['serial'],
+                    nCore=paramThis['nCore']
+                )
 
                 # Save to h5 and make plots
-                for iMethod, method in enumerate(methods):
+                for iMethod, method in enumerate(paramThis['methods']):
                     fname_h5 = "window_" + str(wMin) + '_' + str(wMax) + '_' + modelName + '_' + str(nNode) + '_' + method
-                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + paramThis['figExt']
                     teData = rezIDTxl[method].transpose((1, 2, 3, 0))
+                    fc_accuracy_plots(windowRange, teData, trueConn, method, paramThis['pTHR'], logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
-                    fc_accuracy_plots(windowRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
-
-def analysis_lag(dataFileNames, idtxlSettings, methods, lMin, lMax, pTHR=0.01, figExt='.svg', NCore=None):
-    idtxlSettingsThis = idtxlSettings.copy()
-    idtxlSettingsThis['min_lag_sources'] = lMin
+def analysis_lag(dataFileNames, lMin, lMax, param):
+    paramThis = reinit_param(param, minlag=1)
     lagRange = np.arange(lMin, lMax+1)
     window = lMax + 1
 
@@ -212,26 +260,26 @@ def analysis_lag(dataFileNames, idtxlSettings, methods, lMin, lMax, pTHR=0.01, f
                 data, trueConn = read_data_h5(fnameThis, modelName, expectedShape)
                 dataLst = [data[:, :window, :]]
 
+                # Run calculation
                 rezIDTxlLst = []
                 for maxlag in lagRange:
-                    idtxlSettingsThis['max_lag_sources'] = maxlag
-                    rezIDTxlLst += [idtxlParallelCPUMulti(dataLst, idtxlSettingsThis, methods, NCore=NCore)]
+                    paramThis['paramLib']['max_lag_sources'] = maxlag
+                    rezIDTxlLst += [wrapper_multiparam(dataLst, paramThis)]
                 rezIDTxlDict = merge_dicts(rezIDTxlLst)
 
                 # Save to h5 and make plots
-                for iMethod, method in enumerate(methods):
+                for iMethod, method in enumerate(paramThis['methods']):
                     fname_h5 = "lag_" + str(lMin) + '_' + str(lMax) + '_' + modelName + '_' + str(nNode) + '_' + method
-                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + paramThis['figExt']
                     teData = np.array([teDataSingle[0] for teDataSingle in rezIDTxlDict[method]]).transpose((1, 2, 3, 0))
 
-                    fc_accuracy_plots(lagRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
+                    fc_accuracy_plots(lagRange, teData, trueConn, method, paramThis['pTHR'], logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
 
-def analysis_downsample(dataFileNames, idtxlSettings, methods, downsampleTimesRange, pTHR=0.01, figExt='.svg', NCore=None):
-    idtxlSettingsThis = idtxlSettings.copy()
-    idtxlSettingsThis['min_lag_sources'] = 1
-    idtxlSettingsThis['max_lag_sources'] = 5
+def analysis_downsample(dataFileNames, downsampleTimesRange, param):
     window = 6
+    paramThis = reinit_param(param, 1, 5)
+
     paramDS = {'method': 'averaging', 'kind': 'kernel'}
     dsMin = np.min(downsampleTimesRange)
     dsMax = np.max(downsampleTimesRange)
@@ -258,12 +306,12 @@ def analysis_downsample(dataFileNames, idtxlSettings, methods, downsampleTimesRa
 
                 # Downsample the data, then select only the window of interest
                 dataLst = [downsample_times(data, timesDS, paramDS)[:, :window, :] for timesDS in downsampleTimesRange]
-                rezIDTxl = idtxlParallelCPUMulti(dataLst, idtxlSettingsThis, methods, NCore=NCore)
+                rezIDTxl = wrapper_multiparam(dataLst, paramThis)
 
                 # Save to h5 and make plots
-                for iMethod, method in enumerate(methods):
+                for iMethod, method in enumerate(paramThis['methods']):
                     fname_h5 = "window_" + str(dsMin) + '_' + str(dsMax) + '_' + modelName + '_' + str(nNode) + '_' + method
-                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + figExt
+                    fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + paramThis['figExt']
                     teData = rezIDTxl[method].transpose((1, 2, 3, 0))
 
-                    fc_accuracy_plots(downsampleTimesRange, teData, trueConn, method, pTHR, logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
+                    fc_accuracy_plots(downsampleTimesRange, teData, trueConn, method, paramThis['pTHR'], logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)

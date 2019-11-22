@@ -10,8 +10,13 @@ rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
 print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
-from codes.lib.fc.corr_lib import corr3D
-from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPU
+from codes.lib.fc.fc_generic import fc_parallel
+
+
+# IDTxl parameters
+def parm_append_cmi(param, cmiEst):
+    return {**param, **{'cmi_estimator'   : cmiEst}}
+
 
 def generate_data(nTrial, nData, isSelfPredictive, isLinear, isShifted):
     dataShape = (nTrial, nData)
@@ -37,34 +42,34 @@ def generate_data(nTrial, nData, isSelfPredictive, isLinear, isShifted):
     return np.array([x, y])
 
 
-# IDTxl parameters
-def getIDTxlSettings(est):
-    return {
-        'dim_order'       : 'rsp',
-        'method'          : 'BivariateMI',
-        'cmi_estimator'   : est,
-        'max_lag_sources' : 0,
-        'min_lag_sources' : 0
-    }
+def write_phase_space_fig(data, dataName):
+    plt.figure()
+    plt.plot(data[0].flatten(), data[1].flatten(), '.')
+    plt.savefig("data_" + dataName + ".png")
+    plt.close()
 
 
-algFuncDict = {
-    "Corr" : lambda data, est, ncore: corr3D(data, est=est),
-    "BMI"  : lambda data, est, ncore: idtxlParallelCPU(data.transpose((1, 2, 0)), getIDTxlSettings(est), NCore=ncore)
-}
+def write_fc_lag_p_fig(rez, rezLabel):
+    # Plot results
+    fig, ax = plt.subplots(ncols=len(rez), squeeze=False)
+    fig.suptitle(rezLabel)
+    for iRez, rezMat in enumerate(rez):
+        rezAbsRound = np.round(np.abs(rezMat), 2)
+        ax[0, iRez].imshow(rezAbsRound, vmin=0)
+        for (j, i), label in np.ndenumerate(rezAbsRound):
+            ax[0, iRez].text(i, j, label, ha='center', va='center', color='r')
+
+    plt.savefig(rezLabel + ".png")
+    plt.close()
 
 
-algEstLst = [
-    # ("Corr", "corr"),
-    # ("Corr", "spr"),
-    # ("BMI", "OpenCLKraskovCMI"),
-    ("BMI", "JidtGaussianCMI"),
-    #("BMI", "JidtKraskovCMI"),
-]
-
-pvalFuncDict = {
-    "Corr"  : lambda rez: rez[1][0, 1],
-    "BMI"   : lambda rez: rez[2][0, 1]
+########################
+# Generic parameters
+########################
+param = {
+    'dim_order'       : 'prs',
+    'max_lag_sources' : 0,
+    'min_lag_sources' : 0
 }
 
 # Test Linear
@@ -72,45 +77,47 @@ nTime = 10
 nTrial = 10
 nCoreArr = np.arange(4, 5)
 
+########################
+# Sweep parameters
+########################
 
-for iStuff in range(20):
+algDict = {
+    "Libraries"    : ["corr", "corr", "idtxl", "idtxl", "idtxl"],
+    "Estimators"   : ["corr", "spr", "BivariateMI", "BivariateMI", "BivariateMI"],
+    "CMI"          : [None, None, "OpenCLKraskovCMI", "JidtGaussianCMI", "JidtKraskovCMI"],
+    "parallel_trg" : [False, False, True, True, True]
+}
+
+
+for iTestRepetition in range(20):
 
     timesDict = {}
     ptests = []
     for dataName in ["Linear", "Circular"]:
         data = generate_data(nTrial, nTime, False, dataName == "Linear", False)
 
-        # plt.figure()
-        # plt.plot(data[0].flatten(), data[1].flatten(), '.')
-        # plt.savefig("data_" + dataName + ".png")
-        # plt.close()
+        #write_phase_space_fig(data, dataName)
 
-        for method, estimator in algEstLst:
-            taskKey = (dataName, method, estimator)
+        for library, estimator, cmi, parTarget in zip(*algDict.values()):
+            # Get label
+            taskKey = (dataName, library, estimator, cmi)
             print("computing", taskKey)
 
-            # Compute metric
+            # Get settings
+            paramThis = param if cmi is None else parm_append_cmi(param, cmi)
+
+            # Compute performance metric
             timesDict[taskKey] = []
 
             for nCore in nCoreArr:
                 tStart = time()
-                rez = algFuncDict[method](data, estimator, nCore)
+                rez = fc_parallel(data, library, estimator, paramThis, parTarget=parTarget, serial=False, nCore=nCore)
                 timesDict[taskKey] += [time() - tStart]
-                ptests += [taskKey + (nCore, pvalFuncDict[method](rez))]
+                ptests += [taskKey + (nCore, rez[2][0,1])]
 
-            # # Plot results
-            # fig, ax = plt.subplots(ncols=len(rez), squeeze=False)
-            # fig.suptitle(resultLabel)
-            # for iRez, rezMat in enumerate(rez):
-            #     rezAbsRound = np.round(np.abs(rezMat), 2)
-            #     ax[0, iRez].imshow(rezAbsRound, vmin=0)
-            #     for (j, i), label in np.ndenumerate(rezAbsRound):
-            #         ax[0, iRez].text(i, j, label, ha='center', va='center', color='r')
-            #
-            # plt.savefig(resultLabel + ".png")
-            # plt.close()
+                #write_fc_lag_p_fig(rez, str(taskKey) )
 
-            # Report significance of off-diagonal link
+            # TODO: Report significance of off-diagonal link
 
 
             print("Sleeping...")

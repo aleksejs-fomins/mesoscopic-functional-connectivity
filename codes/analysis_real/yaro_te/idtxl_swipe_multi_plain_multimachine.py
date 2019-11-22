@@ -18,7 +18,7 @@ print("Appended root directory", rootpath)
 # User libraries
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
 from codes.lib.signal_lib import resample
-from codes.lib.fc.te_idtxl_wrapper import idtxlParallelCPUMulti
+from codes.lib.fc.idtxl_wrapper import idtxlParallelCPUMulti
 
 
 ##############################
