@@ -13,9 +13,9 @@ Stated   | Finished | Pr | Eff | Task          | Subtask
 25.11.19 |          | 3  |     | Impl          | Refactor fc_generic that first param is not data - synergize with memory decorator
 19.11.19 | 19.11.19 | 4  | 5h  | Impl          | Generic FC parallelization pipeline
 20.11.19 | 20.11.19 | 4  | 30m | Impl          | Generic FC :: CrossCorr, Cross-Spr
-20.11.19 | 20.11.19 | 3  |     | Impl          | Generic FC :: Nifty
-20.11.19 | 20.11.19 | 3  |     | Impl          | Generic FC :: MAR
-20.11.19 | 20.11.19 | 3  |     | Impl          | Generic FC :: DCM (eventually)
+20.11.19 |          | 3  |     | Impl          | Generic FC :: Nifty
+20.11.19 |          | 3  |     | Impl          | Generic FC :: MAR
+20.11.19 |          | 3  |     | Impl          | Generic FC :: DCM (eventually)
 20.11.19 | 21.11.19 | 5  | 3h  | Impl          | Generic FC :: Pipeline via single test :: Taskwriter
 20.11.19 | 21.11.19 | 5  | 30m | Impl          | Generic FC :: Pipeline via single test :: Taskrunner
 20.11.19 | 21.11.19 | 5  | 1h  | Impl          | Generic FC :: Pipeline via single test :: Result stitcher
@@ -27,6 +27,7 @@ Stated   | Finished | Pr | Eff | Task          | Subtask
 20.11.19 |          | 5  |     | GenData       | Depth, Width for lag 1-5
 20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: MI     :: GaussianCMI
 20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: MI, TE :: KraskovCMI
+20.11.19 |          | 4  |     | IDTxl-sweep   | RealData :: TE :: GaussianCMI :: Single Mouse (12,48) :: SNR, Window, Lag, DS
 20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: SNR        :: GaussianCMI
 20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: Window     :: GaussianCMI
 20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: Lag        :: GaussianCMI
@@ -35,6 +36,12 @@ Stated   | Finished | Pr | Eff | Task          | Subtask
 20.11.19 |          | 4  |     | Investigate   | Simulated :: Downsample :: Effect of Lag
 20.11.19 |          | 4  |     | Investigate   | Simulated :: Downsample :: Effect of more complex system
 20.11.19 |          | 3  |     | Investigate   | Deconvolution :: Feasibility
+
+For real vs simulated analysis
+* Rewrite fc_accuracy_analysis
+  * Separate Pandas Loop from analysis
+     * Design mask-based generator for simulated
+  * Do not plot in analysis, only save h5
 
 
 Status-Memory-Leak:

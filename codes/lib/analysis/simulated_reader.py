@@ -30,3 +30,24 @@ def read_data_h5(fname, expectedModel=None, expectedShape=None):
             raise ValueError("Data shape in the file does not correspond filename")
 
     return data, trueConn
+
+
+def data_sweep_generator(fileInfoDf, dataFileNames, analysisLst, modelLst, nNodeLst):
+    for analysis in analysisLst:
+        for modelName in modelLst:
+            for nNode in nNodeLst:
+                dfThis = fileInfoDf[
+                    (fileInfoDf['analysis'] == analysis) &
+                    (fileInfoDf['modelname'] == modelName) &
+                    (fileInfoDf['nNode'] == nNode)
+                ]
+
+                print("For analysis", analysis, "model", modelName, "nNode", nNode, "have", len(dfThis), "files")
+
+                dataLst = []
+                for index, row in dfThis.iterrows():
+                    fnameThis = dataFileNames[index]
+                    expectedShape = (row["nTrial"], row["nTime"], nNode)
+                    data, trueConn = read_data_h5(fnameThis, modelName, expectedShape)
+
+                    dataLst += [data]

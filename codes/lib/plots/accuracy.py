@@ -9,6 +9,25 @@ from codes.lib.plots.matrix import imshowAddColorBar
 from codes.lib.plots.matplotblib_lib import set_percent_axis_y, hist_int
 
 
+# Write FC results to file
+def fc_accuracy_writefile(h5_fname, xparam, fcData, method, connTrue=None):
+    filemode = "a" if os.path.isfile(h5_fname) else "w"
+    with h5py.File(h5_fname, filemode) as h5f:
+        if "metadata" not in h5f.keys():
+            grp_rez = h5f.create_group("metadata")
+            grp_rez['xparam'] = xparam
+            if connTrue is not None:
+                grp_rez['connTrue'] = connTrue
+
+        if method in h5f.keys():
+            raise ValueError("Already have data for method", method)
+
+        grp_method = h5f.create_group(method)
+        grp_method['TE_table']    = fcData[0]
+        grp_method['delay_table'] = fcData[1]
+        grp_method['p_table']     = fcData[2]
+
+
 # Create test plots from previously saved file
 def fc_accuracy_plots_fromfile(h5_fname, methods, pTHR, logx=True, percenty=False, fig_fname=None):
     with h5py.File(h5_fname, "r") as h5f:
@@ -33,33 +52,18 @@ def fc_accuracy_plots_fromfile(h5_fname, methods, pTHR, logx=True, percenty=Fals
 
 # Create test plots directily from data, maybe saving to h5
 def fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=True, percenty=False, h5_fname=None, fig_fname=None):
-    te3D, lag3D, p3D = fcData
-
     #####################################
     # Save data
     #####################################
     if h5_fname is not None:
-        filemode = "a" if os.path.isfile(h5_fname) else "w"
-        with h5py.File(h5_fname, filemode) as h5f:
-            if "metadata" not in h5f.keys():
-                grp_rez = h5f.create_group("metadata")
-                grp_rez['xparam'] = xparam
-                grp_rez['connTrue'] = connTrue
-
-            if method in h5f.keys():
-                raise ValueError("Already have data for method", method)
-
-            grp_method = h5f.create_group(method)
-            grp_method['TE_table'] = te3D
-            grp_method['delay_table'] = lag3D
-            grp_method['p_table'] = p3D
+        fc_accuracy_writefile(h5_fname, xparam, fcData, method, connTrue=connTrue)
 
     #####################################
     # Analysis
     #####################################
 
     # Copy data to avoid modifying originals
-    te, lag, p = np.copy(te3D), np.copy(lag3D), np.copy(p3D)
+    te, lag, p = np.copy(fcData)
     nNode, _, nStep = te.shape
 
     #  Find which connections have high confidence
@@ -218,7 +222,6 @@ def bte_accuracy_special_fromfile(h5_fname, methods, pTHR, connUndecided, logx=T
                 if percenty:
                     set_percent_axis_y(ax)
                 ax.legend()
-
 
                 if fig_fname is not None:
                     plt.savefig(fig_fname, dpi=300)
