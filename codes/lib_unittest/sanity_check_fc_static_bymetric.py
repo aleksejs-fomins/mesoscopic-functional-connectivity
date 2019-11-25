@@ -88,6 +88,8 @@ algDict = {
     "parallel_trg" : [False, False, True, True, True]
 }
 
+excludeCMI = ["OpenCLKraskovCMI"]
+
 
 for iTestRepetition in range(20):
 
@@ -101,27 +103,29 @@ for iTestRepetition in range(20):
         for library, estimator, cmi, parTarget in zip(*algDict.values()):
             # Get label
             taskKey = (dataName, library, estimator, cmi)
-            print("computing", taskKey)
 
-            # Get settings
-            paramThis = param if cmi is None else parm_append_cmi(param, cmi)
+            if cmi not in excludeCMI:
+                print("computing", taskKey)
 
-            # Compute performance metric
-            timesDict[taskKey] = []
+                # Get settings
+                paramThis = param if cmi is None else parm_append_cmi(param, cmi)
 
-            for nCore in nCoreArr:
-                tStart = time()
-                rez = fc_parallel(data, library, estimator, paramThis, parTarget=parTarget, serial=False, nCore=nCore)
-                timesDict[taskKey] += [time() - tStart]
-                ptests += [taskKey + (nCore, rez[2][0,1])]
+                # Compute performance metric
+                timesDict[taskKey] = []
 
-                #write_fc_lag_p_fig(rez, str(taskKey) )
+                for nCore in nCoreArr:
+                    tStart = time()
+                    rez = fc_parallel(data, library, estimator, paramThis, parTarget=parTarget, serial=False, nCore=nCore)
+                    timesDict[taskKey] += [time() - tStart]
+                    ptests += [taskKey + (nCore, rez[2][0,1])]
 
-            # TODO: Report significance of off-diagonal link
+                    #write_fc_lag_p_fig(rez, str(taskKey) )
+
+                # TODO: Report significance of off-diagonal link
 
 
-            print("Sleeping...")
-            sleep(1)
+                print("Sleeping...")
+                sleep(1)
 
 
 print("Off diagonal p-values")

@@ -36,7 +36,12 @@ def slice_sorted(data, rng):
         bisect.bisect_left(data, rng[0]),
         bisect.bisect_right(data, rng[1])]
 
-def perm_map(A, B):
-    aArr = np.array(A)
-    bArr = np.array(B)
-    return np.where(aArr.reshape(aArr.size, 1) == bArr)[1]
+
+# Finds permutation map A->B of elements of two arrays, which are permutations of each other
+def perm_map_arr(a, b):
+    return np.where(a.reshape(a.size, 1) == b)[1]
+
+
+# Same as perm_map_arr, but for string characters
+def perm_map_str(a, b):
+    return perm_map_arr(np.array(list(a)), np.array(list(b)))

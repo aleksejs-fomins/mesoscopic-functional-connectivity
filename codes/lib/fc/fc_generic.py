@@ -33,10 +33,10 @@ class genericMapper():
             self.pool = pathos.multiprocessing.ProcessingPool(self.nCore)
             # self.pool = multiprocessing.Pool(self.nCore)
 
-    def __del__(self):
-        if not self.serial:
-            self.pool.close()
-            self.pool.join()
+    # def __del__(self):
+    #     if not self.serial:
+    #         self.pool.close()
+    #         self.pool.join()
 
     def map(self, f, x):
         print("----Root process", self.pid, "started task on", self.nCore, "cores----")
@@ -52,7 +52,7 @@ def preprocess_data(data, library, settings):
         return data
 
 
-@time_mem_1starg
+#@time_mem_1starg
 def analyse_single_target(iTrg, data, library, method, settings):
     if library == 'idtxl':
         return idtxl_wrapper.analyse_single_target(iTrg, data, method, settings)
@@ -60,7 +60,7 @@ def analyse_single_target(iTrg, data, library, method, settings):
         raise ValueError("Single target not implemented for", library)
 
 
-@time_mem_1starg
+#@time_mem_1starg
 def analyse_network(data, library, method, settings):
     if library == 'idtxl':
         return idtxl_wrapper.analyse_network(data, method, settings)

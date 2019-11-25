@@ -10,14 +10,15 @@ Stated   | Finished | Pr | Eff | Task          | Subtask
 20.11.19 |          | 3  |     | Test          | Analysis-behavioural-neural
 20.11.19 | 20.11.19 | 3  | 20m | fix           | downsample :: optimize :: yaro-behaviour-preprocess
 20.11.19 |          | 3  |     | fix           | downsample :: optimize :: connectomics :: plot_te_rel_diff_nlinks_bydays
+25.11.19 |          | 3  |     | Impl          | Refactor fc_generic that first param is not data - synergize with memory decorator
 19.11.19 | 19.11.19 | 4  | 5h  | Impl          | Generic FC parallelization pipeline
 20.11.19 | 20.11.19 | 4  | 30m | Impl          | Generic FC :: CrossCorr, Cross-Spr
 20.11.19 | 20.11.19 | 3  |     | Impl          | Generic FC :: Nifty
 20.11.19 | 20.11.19 | 3  |     | Impl          | Generic FC :: MAR
 20.11.19 | 20.11.19 | 3  |     | Impl          | Generic FC :: DCM (eventually)
-20.11.19 |          | 5  |     | Impl          | Generic FC :: Pipeline via single test :: Taskwriter
-20.11.19 |          | 5  |     | Impl          | Generic FC :: Pipeline via single test :: Taskrunner
-20.11.19 |          | 5  |     | Impl          | Generic FC :: Pipeline via single test :: Result stitcher
+20.11.19 | 21.11.19 | 5  | 3h  | Impl          | Generic FC :: Pipeline via single test :: Taskwriter
+20.11.19 | 21.11.19 | 5  | 30m | Impl          | Generic FC :: Pipeline via single test :: Taskrunner
+20.11.19 | 21.11.19 | 5  | 1h  | Impl          | Generic FC :: Pipeline via single test :: Result stitcher
 20.11.19 |          | 4  |     | Impl          | Mass downsampler - avoid redoing it in mono tasks
 20.11.19 |          | 4  |     | Impl          | RealData :: Suppl_1,2,3 :: Overplot BTE vs MTE
 20.11.19 |          | 4  |     | Impl          | RealData :: Suppl_1,2,3 :: Overplot DS, Lpfsub, noise

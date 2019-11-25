@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.stats
 
-from codes.lib.aux_functions import perm_map
+from codes.lib.aux_functions import perm_map_str
 from codes.lib.stat_lib import bonferroni_correction
 
 def corr_significance(c, nData):
@@ -58,9 +58,9 @@ def crossCorr(data, settings, est='corr'):
 
     # Transpose dataset into comfortable form
     if haveTrials:
-        dataOrd = data.transpose(perm_map(settings['dim_order'], 'psr'))
+        dataOrd = data.transpose(perm_map_str(settings['dim_order'], 'psr'))
     else:
-        dataOrd = data.transpose(perm_map(settings['dim_order'], 'ps'))
+        dataOrd = data.transpose(perm_map_str(settings['dim_order'], 'ps'))
 
     # Extract dimensions
     nNode, nTime = data.shape[:2]

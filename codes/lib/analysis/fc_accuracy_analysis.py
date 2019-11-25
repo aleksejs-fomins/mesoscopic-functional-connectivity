@@ -8,46 +8,21 @@ from codes.lib.signal_lib import resample
 from codes.lib.fc.fc_generic import fc_parallel_multiparam
 from codes.lib.plots.accuracy import fc_accuracy_plots
 from codes.lib.models.false_negative_boost import makedata_snr_observational, makedata_snr_occurence
+from codes.lib.analysis.simulated_reader import read_data_h5, parse_file_names_pandas
 
 
-def parse_file_names_pandas(dataFileNames):
-    baseNamesBare = [os.path.splitext(os.path.basename(fname))[0] for fname in dataFileNames]
-    fileInfoDf = pd.DataFrame([fname.split('_') for fname in baseNamesBare],
-                              columns = ['analysis', 'modelname', 'nTrial', 'nNode', 'nTime'])
-    fileInfoDf = fileInfoDf.astype(dtype={'nTrial': 'int', 'nNode': 'int', 'nTime': 'int'})
-    fileParams = {
-        "analysis" : set(fileInfoDf['analysis']),
-        "model"    : set(fileInfoDf['modelname']),
-        "nNode"    : set(fileInfoDf['nNode']),
-    }
 
-    return fileInfoDf, fileParams
-
-
-def read_data_h5(fname, expectedModel=None, expectedShape=None):
-    with h5py.File(fname, "r") as h5f:
-        trueConn = np.copy(h5f['results']['connTrue'])
-        data = np.copy(h5f['results']['data'])
-
-        if (expectedModel is not None) and (expectedModel != str(np.copy(h5f['results']['modelName']))):
-            raise ValueError("Data model in the file does not correspond filename")
-
-        if (expectedShape is not None) and (expectedShape != data.shape):
-            raise ValueError("Data shape in the file does not correspond filename")
-
-    return data, trueConn
-
-
-def downsample_times(data, timesDS, paramDS):
-    if timesDS < 1:
-        raise ValueError("Downsampling times must be >=1, got", timesDS)
-    elif timesDS == 1:
+# Downsamples the data, such that the interval between time steps is "factor" times smaller
+def downsample_factor(data, factor, paramDS):
+    if factor < 1:
+        raise ValueError("Downsampling times must be >=1, got", factor)
+    elif factor == 1:
         return data
     else:
         nTrial, nTime, nNode = data.shape
 
-        # The resulting number of INTERVALS must be approximately "timesDS" times smaller than original
-        nTimeNew = int(np.round((nTime - 1) / timesDS + 1))
+        # The resulting number of INTERVALS must be approximately "factor" times smaller than original
+        nTimeNew = int(np.round((nTime - 1) / factor + 1))
 
         # Actual times do not matter, only their ratio
         fakeTimesOrig = np.linspace(0, nTime-1, nTime)
@@ -276,13 +251,13 @@ def analysis_lag(dataFileNames, lMin, lMax, param):
                     fc_accuracy_plots(lagRange, teData, trueConn, method, paramThis['pTHR'], logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
 
 
-def analysis_downsample(dataFileNames, downsampleTimesRange, param):
+def analysis_downsample(dataFileNames, downsampleFactorLst, param):
     window = 6
     paramThis = reinit_param(param, 1, 5)
 
     paramDS = {'method': 'averaging', 'kind': 'kernel'}
-    dsMin = np.min(downsampleTimesRange)
-    dsMax = np.max(downsampleTimesRange)
+    dsMin = np.min(downsampleFactorLst)
+    dsMax = np.max(downsampleFactorLst)
 
 
     analysis = 'typical'
@@ -305,7 +280,7 @@ def analysis_downsample(dataFileNames, downsampleTimesRange, param):
                 data, trueConn = read_data_h5(fnameThis, modelName, expectedShape)
 
                 # Downsample the data, then select only the window of interest
-                dataLst = [downsample_times(data, timesDS, paramDS)[:, :window, :] for timesDS in downsampleTimesRange]
+                dataLst = [downsample_factor(data, factor, paramDS)[:, :window, :] for factor in downsampleFactorLst]
                 rezIDTxl = wrapper_multiparam(dataLst, paramThis)
 
                 # Save to h5 and make plots
@@ -314,4 +289,4 @@ def analysis_downsample(dataFileNames, downsampleTimesRange, param):
                     fname_fig = os.path.splitext(fname_h5)[0] + '_' + method + paramThis['figExt']
                     teData = rezIDTxl[method].transpose((1, 2, 3, 0))
 
-                    fc_accuracy_plots(downsampleTimesRange, teData, trueConn, method, paramThis['pTHR'], logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
+                    fc_accuracy_plots(downsampleFactorLst, teData, trueConn, method, paramThis['pTHR'], logx=False, percenty=True, h5_fname=fname_h5, fig_fname=fname_fig)
