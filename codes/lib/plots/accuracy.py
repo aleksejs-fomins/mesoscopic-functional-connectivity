@@ -1,5 +1,3 @@
-import os
-import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,55 +7,8 @@ from codes.lib.plots.matrix import imshowAddColorBar
 from codes.lib.plots.matplotblib_lib import set_percent_axis_y, hist_int
 
 
-# Write FC results to file
-def fc_accuracy_writefile(h5_fname, xparam, fcData, method, connTrue=None):
-    filemode = "a" if os.path.isfile(h5_fname) else "w"
-    with h5py.File(h5_fname, filemode) as h5f:
-        if "metadata" not in h5f.keys():
-            grp_rez = h5f.create_group("metadata")
-            grp_rez['xparam'] = xparam
-            if connTrue is not None:
-                grp_rez['connTrue'] = connTrue
-
-        if method in h5f.keys():
-            raise ValueError("Already have data for method", method)
-
-        grp_method = h5f.create_group(method)
-        grp_method['TE_table']    = fcData[0]
-        grp_method['delay_table'] = fcData[1]
-        grp_method['p_table']     = fcData[2]
-
-
-# Create test plots from previously saved file
-def fc_accuracy_plots_fromfile(h5_fname, methods, pTHR, logx=True, percenty=False, fig_fname=None):
-    with h5py.File(h5_fname, "r") as h5f:
-        xparam = np.copy(h5f['metadata']['xparam'])
-        connTrue = np.copy(h5f['metadata']['connTrue'])
-
-        for method in methods:
-            if method in h5f:
-                fcData = [
-                    np.copy(h5f[method]['TE_table']),
-                    np.copy(h5f[method]['delay_table']),
-                    np.copy(h5f[method]['p_table'])]
-
-                if fig_fname is not None:
-                    fig_fname_bare, fig_ext = os.path.splitext(fig_fname)
-                    fig_fname_method = fig_fname_bare + "_" + method + fig_ext
-                else:
-                    fig_fname_method = None
-
-                fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=logx, percenty=percenty, h5_fname=None, fig_fname=fig_fname_method)
-
-
 # Create test plots directily from data, maybe saving to h5
-def fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=True, percenty=False, h5_fname=None, fig_fname=None):
-    #####################################
-    # Save data
-    #####################################
-    if h5_fname is not None:
-        fc_accuracy_writefile(h5_fname, xparam, fcData, method, connTrue=connTrue)
-
+def fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=True, percenty=False, fig_fname=None):
     #####################################
     # Analysis
     #####################################
@@ -162,66 +113,87 @@ def fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=True, percent
     ###############################
     if fig_fname is not None:
         plt.savefig(fig_fname, dpi=300)
+    else:
+        plt.show()
 
 
 # Create type-1 plots for BTE with extra curve for false positives in the upper quadrant
-def bte_accuracy_special_fromfile(h5_fname, methods, pTHR, connUndecided, logx=True, percenty=False, fig_fname=None):
-    with h5py.File(h5_fname, "r") as h5f:
-        xparam = np.copy(h5f['metadata']['xparam'])
-        connTrue = np.copy(h5f['metadata']['connTrue'])
+def bte_accuracy_special_fromfile(xparam, fcData, connTrue, method, pTHR, connUndecided, logx=True, percenty=False, fig_fname=None):
+    # Copy data to avoid modifying originals
+    te, lag, p = fcData
+    nNode, _, nStep = te.shape
 
-        for method in methods:
-            if method in h5f:
-                fcData = [
-                    np.copy(h5f[method]['TE_table']),
-                    np.copy(h5f[method]['delay_table']),
-                    np.copy(h5f[method]['p_table'])]
+    #  Find which connections have high confidence
+    connExclude = connUndecided & diag_idx(nNode)
 
-                if fig_fname is not None:
-                    fig_fname_bare, fig_ext = os.path.splitext(fig_fname)
-                    fig_fname_method = fig_fname_bare + "_" + method + fig_ext
-                else:
-                    fig_fname_method = None
+    isConn1DeffH1 = is_conn(offdiag_1D(p), pTHR)
+    isConn1DeffH2 = is_conn(p[~connExclude], pTHR)
+    isConn1DeffH1True = ~np.isnan(offdiag_1D(connTrue))
+    isConn1DeffH2True = ~np.isnan(connTrue[~connExclude])
 
-                # Copy data to avoid modifying originals
-                te, lag, p = fcData
-                nNode, _, nStep = te.shape
+    freqTrueH1 = np.mean(isConn1DeffH1True)
+    freqTrueH2 = np.mean(isConn1DeffH2True)
 
-                #  Find which connections have high confidence
-                connExclude = connUndecided & diag_idx(nNode)
+    # Compute statistics
+    errTestDictH1 = accuracyTests(isConn1DeffH1, isConn1DeffH1True)
+    errTestDictH2 = accuracyTests(isConn1DeffH2, isConn1DeffH2True)
 
-                isConn1DeffH1 = is_conn(offdiag_1D(p), pTHR)
-                isConn1DeffH2 = is_conn(p[~connExclude], pTHR)
-                isConn1DeffH1True = ~np.isnan(offdiag_1D(connTrue))
-                isConn1DeffH2True = ~np.isnan(connTrue[~connExclude])
+    #####################################
+    # Plots
+    #####################################
 
-                freqTrueH1 = np.mean(isConn1DeffH1True)
-                freqTrueH2 = np.mean(isConn1DeffH2True)
+    plotfuncLinY = lambda ax: ax.semilogx if logx else ax.plot
 
-                # Compute statistics
-                errTestDictH1 = accuracyTests(isConn1DeffH1, isConn1DeffH1True)
-                errTestDictH2 = accuracyTests(isConn1DeffH2, isConn1DeffH2True)
+    fig, ax = plt.subplots()
+    ax.set_title("Error frequencies")
 
-                #####################################
-                # Plots
-                #####################################
+    plotfuncLinY(ax)(xparam, errTestDictH1["FP frequency"], '.-', label='FP-H1')
+    plotfuncLinY(ax)(xparam, errTestDictH2["FP frequency"], '.-', label='FP-H2')
+    plotfuncLinY(ax)(xparam, errTestDictH2["FN frequency"], '.-', label='FN')
 
-                plotfuncLinY = lambda ax: ax.semilogx if logx else ax.plot
+    if freqTrueH2 > 0:
+        ax.axhline(y=freqTrueH2, linestyle='--', label='P')
 
-                fig, ax = plt.subplots()
-                ax.set_title("Error frequencies")
+    # Write y-axis as percent
+    if percenty:
+        set_percent_axis_y(ax)
+    ax.legend()
 
-                plotfuncLinY(ax)(xparam, errTestDictH1["FP frequency"], '.-', label='FP-H1')
-                plotfuncLinY(ax)(xparam, errTestDictH2["FP frequency"], '.-', label='FP-H2')
-                plotfuncLinY(ax)(xparam, errTestDictH2["FN frequency"], '.-', label='FN')
+    if fig_fname is not None:
+        plt.savefig(fig_fname, dpi=300)
+    else:
+        plt.show()
 
-                if freqTrueH2 > 0:
-                    ax.axhline(y=freqTrueH2, linestyle='--', label='P')
 
-                # Write y-axis as percent
-                if percenty:
-                    set_percent_axis_y(ax)
-                ax.legend()
+def fc_accuracy_plots_bymethod(xparam, fcDataDict, pTHR, logx=True, percenty=False, fig_fname=None):
 
-                if fig_fname is not None:
-                    plt.savefig(fig_fname, dpi=300)
+    plotfuncLinY = lambda ax: ax.semilogx if logx else ax.plot
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.set_title("Type 1 error")
+
+    for method, fcData in fcDataDict.items():
+        te, lag, p = fcData
+        nNode, _, nStep = te.shape
+
+        isConn1D = is_conn(offdiag_1D(p), pTHR)
+        nConn = np.sum(isConn1D, axis=0)
+
+        plotfuncLinY(ax)(xparam, nConn, '.-', label=method)
+
+    if percenty:
+        set_percent_axis_y(ax)
+    ax.legend()
+
+    if fig_fname is not None:
+        plt.savefig(fig_fname, dpi=300)
+    else:
+        plt.show()
+
+
+# Would compare type 1 accuracy for every model. Currently low priority
+#def fc_accuracy_plots_bymodel():
+
+
+def fc_accuracy_plots_vsreal(xparam, fcDataDictSim, fcDataDictReal, pTHR, logx=True, percenty=False, fig_fname=None):
+    pass

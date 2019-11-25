@@ -10,7 +10,7 @@ print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 from codes.lib.data_io.qt_wrapper import gui_fname
-from codes.lib.analysis.simulated_reader import read_data_h5
+from codes.lib.analysis.simulated_file_io import read_data_h5
 
 # Open data filename
 fname = gui_fname("Open simulated data file", "./", "HDF5 (*.h5)")

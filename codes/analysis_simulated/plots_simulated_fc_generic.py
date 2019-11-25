@@ -9,7 +9,8 @@ print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 from codes.lib.data_io.qt_wrapper import gui_fnames
-from codes.lib.plots.accuracy import fc_accuracy_plots_fromfile
+from codes.lib.plots.accuracy import fc_accuracy_plots
+from codes.lib.analysis.simulated_file_io import read_fc_h5
 
 
 #############################
@@ -29,7 +30,8 @@ dataParamsDict = {
     "logx"      : [True, True, True, False, False, False],
 }
 
-def testAnalysisType(fname):
+# Determine analysis type and associated params
+def parse_analysis_type(fname):
     testType = [key in fname for key in dataParamsDict['analysis']]
     if np.sum(testType) != 1:
         raise ValueError(fname, "matched", np.sum(testType), "analysis types")
@@ -41,10 +43,17 @@ def testAnalysisType(fname):
 
 
 for fname in dataFileNames:
-    fig_fname = os.path.splitext(fname)[0] + fExt
+    # Determine analysis type and associated params
+    analysis, logx = parse_analysis_type(fname)
 
-    print(fig_fname)
+    # Read the file
+    rezDict = read_fc_h5(fname, methods)
 
-    analysis, logx = testAnalysisType(fname)
+    # Make a plot for every method in the file
+    for method in methods:
+        if method in rezDict.keys():
+            fig_fname_method = os.path.splitext(fname)[0] + "_" + method + fExt
 
-    fc_accuracy_plots_fromfile(fname, methods, pTHR, logx=logx, percenty=True, fig_fname=fig_fname)
+            print(fig_fname_method)
+
+            fc_accuracy_plots(rezDict['xparam'], rezDict[method], rezDict['connTrue'], method, pTHR, logx=logx, percenty=True, fig_fname=fig_fname_method)

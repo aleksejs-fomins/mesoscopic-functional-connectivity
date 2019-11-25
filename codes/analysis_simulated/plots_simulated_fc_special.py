@@ -1,5 +1,5 @@
 '''
-1.
+1. Eliminate upper right triangle for BTE, introducing extra metric
 2. Overplot BTE vs MTE
   * Load all FC files, parse names into pandas
   * Group together files where only METHOD is diff
