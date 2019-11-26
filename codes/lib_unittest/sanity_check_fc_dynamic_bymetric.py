@@ -128,7 +128,8 @@ algDict = {
     "parallel_trg" : [False, False, True, True, True, True]
 }
 
-algNames = [l+'_'+e+'_'+cmi if cmi is not None else l+'_'+e for l, e, cmi in zip(*algDict.values())]
+# Define algorithm name as concatenation of all its properties that are strings
+algNames = ["_".join([val for val in algVals if type(val) == str]) for algVals in zip(*algDict.values())]
 
 varSweep = [(p,d,s) for p in ["incr", "random"] for d in ["linear", "circular"] for s in ["matching", "shifted"]]
 nSweep = len(varSweep)

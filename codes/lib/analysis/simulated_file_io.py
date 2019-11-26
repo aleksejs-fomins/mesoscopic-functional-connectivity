@@ -3,6 +3,30 @@ import numpy as np
 import h5py
 import pandas as pd
 
+# Writes data file
+def write_data_h5(fpath, data, trueConn, param):
+    # Test that data has expected shape
+    expDataShape = (param["nTrial"], param["nData"], param["nNode"])
+    if data.shape != expDataShape:
+        raise ValueError("Got shape", data.shape, "expected", expDataShape)
+
+    # Test that true connectivity has expected shape
+    expConnShape = (param["nNode"], param["nNode"])
+    if trueConn.shape != expConnShape:
+        raise ValueError("Got shape", trueConn.shape, "expected", expConnShape)
+
+    # Generate output name
+    outfname = os.path.join(fpath, "_".join(param.values()) + ".h5" )
+
+
+    # Save to that file
+    with h5py.File(outfname, "w") as h5f:
+        grp_rez = h5f.create_group("results")
+        grp_rez['modelName']   = param["modelName"]
+        grp_rez['connTrue']    = trueConn
+        grp_rez['data']        = data
+
+
 # Reads data file
 def read_data_h5(fname, expectedModel=None, expectedShape=None):
     with h5py.File(fname, "r") as h5f:

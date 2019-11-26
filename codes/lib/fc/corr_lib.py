@@ -63,7 +63,7 @@ def crossCorr(data, settings, est='corr'):
         dataOrd = data.transpose(perm_map_str(settings['dim_order'], 'ps'))
 
     # Extract dimensions
-    nNode, nTime = data.shape[:2]
+    nNode, nTime = dataOrd.shape[:2]
 
     # Check that number of timesteps is sufficient to estimate lagMax
     if nTime <= lagMax:

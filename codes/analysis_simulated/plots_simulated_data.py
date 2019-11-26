@@ -17,18 +17,21 @@ fname = gui_fname("Open simulated data file", "./", "HDF5 (*.h5)")
 
 # Read file
 data, trueConn = read_data_h5(fname)
-nTrial, nNode, nData = data.shape
+nTrial, nData, nNode = data.shape
 
+
+print("Loaded data file", fname)
+print("Data shape", data.shape)
 
 # Plot results
-iTrial = 10
-fig, ax = plt.subplots()
+iTrial = 10 if nTrial > 10 else 0
+fig, ax = plt.subplots(ncols=2)
 ax[0].set_title("Node activities during trial " + str(iTrial))
 ax[1].set_title("True Connectivity")
 
 for iNode in range(nNode):
-    ax[0].plot(data[iTrial, iNode], label=str(iNode))
+    ax[0].plot(data[iTrial, :, iNode], label=str(iNode))
 
 ax[1].legend()
-ax[1].imshow(trueConn)
+ax[1].imshow(trueConn, vmin=0, vmax=1)
 plt.show()

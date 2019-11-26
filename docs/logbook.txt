@@ -1,9 +1,9 @@
 Stated   | Finished | Pr | Eff | Task          | Subtask
 --------------------------------------------------------------------------------------
-20.11.19 |          | 5  |     | Test          | Plot simulated data, check it looks reasonable
+20.11.19 | 26.11.19 | 5  | 30m | Test          | Plot simulated data, check it looks reasonable
 20.11.19 | 22.11.19 | 5  | 10m | Test          | IDTxl-wrapper
 20.11.19 | 22.11.19 | 5  | 10m | Test          | IDTxl-wrapper-multi
-20.11.19 |          | 5  |     | Test          | FC-static
+20.11.19 | 26.11.19 | 5  | 30m | Test          | FC-static
 20.11.19 |          | 5  |     | Test          | FC-dynamic
 20.11.19 |          | 5  |     | Test          | Simulated :: Imgs :: BTE with H2 curve
 20.11.19 |          | 3  |     | Test          | Behaviour-analysis-template
@@ -25,12 +25,13 @@ Stated   | Finished | Pr | Eff | Task          | Subtask
 20.11.19 |          | 4  |     | Impl          | RealData :: Suppl_1,2,3 :: Overplot DS, RealData for nData, Lag, DS - one mouse. See if already done in mtp15 - I long forgot
 20.11.19 |          | 2  |     | Refactor      | DynSys -> ChainRateNetwork, incl str names
 20.11.19 |          | 5  |     | GenData       | Depth, Width for lag 1-5
-20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: MI     :: GaussianCMI
-20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: MI, TE :: KraskovCMI
-20.11.19 |          | 4  |     | IDTxl-sweep   | RealData :: TE :: GaussianCMI :: Single Mouse (12,48) :: SNR, Window, Lag, DS
 20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: SNR        :: GaussianCMI
 20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: Window     :: GaussianCMI
 20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: Lag        :: GaussianCMI
+20.11.19 |          | 4  |     | IDTxl-sweep   | RealData :: TE :: GaussianCMI :: Single Mouse (12,48) :: SNR, Window, Lag, DS
+20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: MI :: GaussianCMI, KraskovCMI - Lag 0
+20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: TE :: GaussianCMI, KraskovCMI - Lag 1
+20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: TE :: KraskovCMI - Lag 4
 20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: Downsample :: GaussianCMI
 20.11.19 |          | 3  |     | IDTxl-sweep   | Simulated :: Downsample :: int-avg vs kernel
 20.11.19 |          | 4  |     | Investigate   | Simulated :: Downsample :: Effect of Lag

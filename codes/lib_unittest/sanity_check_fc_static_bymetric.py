@@ -42,37 +42,38 @@ def generate_data(nTrial, nData, isSelfPredictive, isLinear, isShifted):
     return np.array([x, y])
 
 
-def write_phase_space_fig(data, dataName):
+def write_phase_space_fig(data, path, dataName):
     plt.figure()
     plt.plot(data[0].flatten(), data[1].flatten(), '.')
-    plt.savefig("data_" + dataName + ".png")
+    plt.savefig(os.path.join(path, "data_" + dataName + ".png"))
     plt.close()
 
 
-def write_fc_lag_p_fig(rez, rezLabel):
+def write_fc_lag_p_fig(rez, path, rezKey):
     # Plot results
     fig, ax = plt.subplots(ncols=len(rez), squeeze=False)
-    fig.suptitle(rezLabel)
     for iRez, rezMat in enumerate(rez):
         rezAbsRound = np.round(np.abs(rezMat), 2)
         ax[0, iRez].imshow(rezAbsRound, vmin=0)
         for (j, i), label in np.ndenumerate(rezAbsRound):
             ax[0, iRez].text(i, j, label, ha='center', va='center', color='r')
 
-    plt.savefig(rezLabel + ".png")
+    outNameBare = "_".join(rezKey) if rezKey[-1] is not None else "_".join(rezKey[:-1])
+    plt.savefig(os.path.join(path, outNameBare + ".png"))
     plt.close()
 
 
 ########################
 # Generic parameters
 ########################
+outpath = "tmp_imgs"
+
 param = {
     'dim_order'       : 'prs',
     'max_lag_sources' : 0,
     'min_lag_sources' : 0
 }
 
-# Test Linear
 nTime = 10
 nTrial = 10
 nCoreArr = np.arange(4, 5)
@@ -90,42 +91,39 @@ algDict = {
 
 excludeCMI = ["OpenCLKraskovCMI"]
 
+timesDict = {}
+ptests = []
+for dataName in ["Linear", "Circular"]:
+    data = generate_data(nTrial, nTime, False, dataName == "Linear", False)
 
-for iTestRepetition in range(20):
+    write_phase_space_fig(data, outpath, dataName)
 
-    timesDict = {}
-    ptests = []
-    for dataName in ["Linear", "Circular"]:
-        data = generate_data(nTrial, nTime, False, dataName == "Linear", False)
+    for library, estimator, cmi, parTarget in zip(*algDict.values()):
+        # Get label
+        taskKey = (dataName, library, estimator, cmi)
 
-        #write_phase_space_fig(data, dataName)
+        if cmi not in excludeCMI:
+            print("computing", taskKey)
 
-        for library, estimator, cmi, parTarget in zip(*algDict.values()):
-            # Get label
-            taskKey = (dataName, library, estimator, cmi)
+            # Get settings
+            paramThis = param if cmi is None else parm_append_cmi(param, cmi)
 
-            if cmi not in excludeCMI:
-                print("computing", taskKey)
+            # Compute performance metric
+            timesDict[taskKey] = []
 
-                # Get settings
-                paramThis = param if cmi is None else parm_append_cmi(param, cmi)
+            for nCore in nCoreArr:
+                tStart = time()
+                rez = fc_parallel(data, library, estimator, paramThis, parTarget=parTarget, serial=False, nCore=nCore)
+                timesDict[taskKey] += [time() - tStart]
+                ptests += [taskKey + (nCore, rez[2][0,1])]
 
-                # Compute performance metric
-                timesDict[taskKey] = []
+                write_fc_lag_p_fig(rez, outpath, taskKey)
 
-                for nCore in nCoreArr:
-                    tStart = time()
-                    rez = fc_parallel(data, library, estimator, paramThis, parTarget=parTarget, serial=False, nCore=nCore)
-                    timesDict[taskKey] += [time() - tStart]
-                    ptests += [taskKey + (nCore, rez[2][0,1])]
-
-                    #write_fc_lag_p_fig(rez, str(taskKey) )
-
-                # TODO: Report significance of off-diagonal link
+            # TODO: Report significance of off-diagonal link
 
 
-                print("Sleeping...")
-                sleep(1)
+            print("Sleeping...")
+            sleep(1)
 
 
 print("Off diagonal p-values")

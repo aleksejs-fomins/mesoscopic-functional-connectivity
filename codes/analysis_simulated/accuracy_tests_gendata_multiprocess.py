@@ -1,6 +1,5 @@
 # Standard libraries
-import os,sys,inspect
-import h5py
+import os, sys
 import copy
 import numpy as np
 import pathos
@@ -13,8 +12,9 @@ print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 # User libraries
-from codes.lib.models.test_lib import noisePure, noiseLPF, dynsys, dynsys_gettrueconn, steps2interv
 from codes.lib.data_io.qt_wrapper import gui_fpath
+from codes.lib.analysis.simulated_file_io import write_data_h5
+from codes.lib.models.test_lib import noisePure, noiseLPF, dynsys, dynsys_gettrueconn, steps2interv
 
 #############################
 # Model parameters
@@ -37,6 +37,7 @@ def get_param_pure_noise(nTrial, nNode, nData, dt):
         'std'         : 1               # Standard deviation of random data
     }
 
+
 def get_param_lpf_sub(nTrial, nNode, nData, dt):
     return {
         'nTrial'      : nTrial,  # Number of trials
@@ -47,6 +48,7 @@ def get_param_lpf_sub(nTrial, nNode, nData, dt):
         'dt'          : dt,            # seconds, Binned optical recording resolution
         'std'         : 1              # Standard deviation of random data
     }
+
 
 def get_param_dyn_sys(nTrial, nNode, nData, dt):
     return {
@@ -59,6 +61,7 @@ def get_param_dyn_sys(nTrial, nNode, nData, dt):
         'inpT'    : 20,      # Period of input oscillation
         'std'     : 0.2      # STD of neuron noise
     }
+
 
 # Find model function by name
 modelFuncDict = {
@@ -95,24 +98,23 @@ def processTask(task):
     trueConn = modelTrueConnDict[modelName](paramThis)
     modelFunc = modelFuncDict[modelName]
 
+    paramWriter = {
+        "testType" : testType,
+        "modelName": modelName,
+        "nTrial": nTrial,
+        "nNode": nNode,
+        "nData": nData
+    }
+
     # Compute results
     dataThis = modelFunc(paramThis).transpose((0, 2, 1))
-    if dataThis.shape != (nTrial, nData, nNode):
-        raise ValueError("Got shape", dataThis.shape, "expected", (nTrial, nData, nNode))
 
     # Save to h5 file
-    outname = os.path.join(outpath, testType + "_" + modelName + "_" + str(nTrial) + "_" + str(nNode) + "_" + str(nData) + ".h5" )
-
-    with h5py.File(outname, "w") as h5f:
-        grp_rez = h5f.create_group("results")
-        grp_rez['modelName']   = modelName
-        grp_rez['connTrue']    = trueConn
-        grp_rez['data']        = dataThis
+    write_data_h5(outpath, dataThis, trueConn, paramWriter)
 
     print("--Finished task", task)
 
     return True
-
 
 
 outpath = gui_fpath("Select output path", "./")
