@@ -92,7 +92,7 @@ def parse_results(results, nNode, method):
 # Returns shape [3 x nSource] for one given target. 3 means [FC, lag, p]
 #@jpype_sync_thread
 @redirect_stdout
-def analyse_single_target(iTrg, data, method, settings):
+def analyse_single_target(iTrg, method, data, settings):
     # Get number of nodes
     # idxNodeShape = settings['dim_order'].index("p")
     # nNode = data.shape[idxNodeShape]
@@ -110,7 +110,7 @@ def analyse_single_target(iTrg, data, method, settings):
 # Returns shape [3 x nSource x nTarget] for one given target. 3 means [FC, lag, p]
 #@jpype_sync_thread
 @redirect_stdout
-def analyse_network(data, method, settings):
+def analyse_network(method, data, settings):
     # idxNodeShape = settings['dim_order'].index("p")
     # nNode = data.shape[idxNodeShape]
     nNode = data.n_processes

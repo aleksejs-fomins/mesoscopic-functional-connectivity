@@ -52,18 +52,18 @@ def preprocess_data(data, library, settings):
         return data
 
 
-#@time_mem_1starg
-def analyse_single_target(iTrg, data, library, method, settings):
+@time_mem_1starg
+def analyse_single_target(iTrg, library, method, data, settings):
     if library == 'idtxl':
-        return idtxl_wrapper.analyse_single_target(iTrg, data, method, settings)
+        return idtxl_wrapper.analyse_single_target(iTrg, method, data, settings)
     else:
         raise ValueError("Single target not implemented for", library)
 
 
-#@time_mem_1starg
-def analyse_network(data, library, method, settings):
+@time_mem_1starg
+def analyse_network(library, method, data, settings):
     if library == 'idtxl':
-        return idtxl_wrapper.analyse_network(data, method, settings)
+        return idtxl_wrapper.analyse_network(method, data, settings)
     elif library == 'corr':
         return crossCorr(data, settings, est=method)
     else:
@@ -75,7 +75,7 @@ def fc_single_target(iTrg, data, library, method, settings):
     dataPreprocessed = preprocess_data(data, library, settings)
 
     # Compute single target FC for preprocessed data
-    return analyse_single_target(iTrg, dataPreprocessed, library, method, settings)
+    return analyse_single_target(iTrg, library, method, dataPreprocessed, settings)
 
 
 # Parallelize a FC estimate over targets
@@ -93,7 +93,7 @@ def fc_parallel_target(data, library, method, settings, serial=False, nCore=None
     # Construct task generator
     def task_gen():
         for iTrg in range(nNode):
-            yield iTrg, dataPreprocessed, library, method, settings
+            yield iTrg, library, method, dataPreprocessed, settings
 
     # Ugly intermediate function to unpack tuple
     parallel_task_proxy = lambda task : analyse_single_target(*task)
@@ -107,7 +107,7 @@ def fc_parallel(data, library, method, settings, parTarget=True, serial=False, n
     if parTarget:
         return fc_parallel_target(data, library, method, settings, serial=serial, nCore=nCore)
     else:
-        return analyse_network(data, library, method, settings)
+        return analyse_network(library, method, data, settings)
 
 
 # Parallelize FC estimate over targets, datasets and methods
@@ -156,7 +156,7 @@ def fc_parallel_multiparam_target(dataLst, library, methods, settings, serial=Fa
     def task_gen():
         for sw in sweepLst:
             methodIdx, dataIdx, targetIdx = sw
-            yield int(targetIdx), dataPreprocessedLst[dataIdx], library, methods[int(methodIdx)], settings
+            yield int(targetIdx), library, methods[int(methodIdx)], dataPreprocessedLst[dataIdx], settings
 
     # Ugly intermediate function to unpack tuple
     parallel_task_proxy = lambda task : analyse_single_target(*task)
@@ -211,7 +211,7 @@ def fc_parallel_multiparam_network(dataLst, library, methods, settings, serial=F
     def task_gen():
         for sw in sweepLst:
             methodIdx, dataIdx = sw
-            yield dataPreprocessedLst[dataIdx], library, methods[int(methodIdx)], settings
+            yield library, methods[int(methodIdx)], dataPreprocessedLst[dataIdx], settings
 
     # Ugly intermediate function to unpack tuple
     parallel_task_proxy = lambda task : analyse_network(*task)

@@ -4,16 +4,16 @@ Stated   | Finished | Pr | Eff | Task          | Subtask
 20.11.19 | 22.11.19 | 5  | 10m | Test          | IDTxl-wrapper
 20.11.19 | 22.11.19 | 5  | 10m | Test          | IDTxl-wrapper-multi
 20.11.19 | 26.11.19 | 5  | 30m | Test          | FC-static
-20.11.19 |          | 5  |     | Test          | FC-dynamic
+20.11.19 | 26.11.19 | 5  | 20m | Test          | FC-dynamic
 20.11.19 |          | 5  |     | Test          | Simulated :: Imgs :: BTE with H2 curve
 20.11.19 |          | 3  |     | Test          | Behaviour-analysis-template
 20.11.19 |          | 3  |     | Test          | Analysis-behavioural-neural
 20.11.19 | 20.11.19 | 3  | 20m | fix           | downsample :: optimize :: yaro-behaviour-preprocess
 20.11.19 |          | 3  |     | fix           | downsample :: optimize :: connectomics :: plot_te_rel_diff_nlinks_bydays
-25.11.19 |          | 3  |     | Impl          | Refactor fc_generic that first param is not data - synergize with memory decorator
+25.11.19 | 27.11.19 | 3  | 10m | Impl          | Refactor fc_generic that first param is not data - synergize with memory decorator
 19.11.19 | 19.11.19 | 4  | 5h  | Impl          | Generic FC parallelization pipeline
 20.11.19 | 20.11.19 | 4  | 30m | Impl          | Generic FC :: CrossCorr, Cross-Spr
-20.11.19 |          | 3  |     | Impl          | Generic FC :: Nifty
+20.11.19 |          | 2  |     | Impl          | Generic FC :: Nifty
 20.11.19 |          | 3  |     | Impl          | Generic FC :: MAR
 20.11.19 |          | 3  |     | Impl          | Generic FC :: DCM (eventually)
 20.11.19 | 21.11.19 | 5  | 3h  | Impl          | Generic FC :: Pipeline via single test :: Taskwriter
