@@ -157,7 +157,7 @@ def analysis_lag(data, connTrue, lMin, lMax, fname_h5, param):
     for maxlag in maxLagRange:
         print(maxlag, type(maxlag))
 
-        paramThis['paramLib']['max_lag_sources'] = maxlag
+        paramThis['paramLib']['max_lag_sources'] = int(maxlag)
         rezIDTxlLst += [wrapper_multiparam(dataLst, paramThis)]
     rezIDTxl = merge_dicts(rezIDTxlLst)
     rezIDTxl = {method : np.array([teDataSingle[0] for teDataSingle in rezLst]) for method, rezLst in rezIDTxl.items() }
