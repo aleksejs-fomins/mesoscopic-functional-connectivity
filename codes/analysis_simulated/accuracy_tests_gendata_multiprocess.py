@@ -65,8 +65,8 @@ def get_param_dyn_sys(nTrial, nNode, nData, dt):
 
 # Find model function by name
 modelFuncDict = {
-    #'purenoise'    : noisePure,
-    #'lpfsubnoise'  : noiseLPF,
+    'purenoise'    : noisePure,
+    'lpfsubnoise'  : noiseLPF,
     'dynsys'       : dynsys_zealous,
 }
 
@@ -129,17 +129,17 @@ taskList = []
 # Generate task list
 for nNode in nNodeLst:
     for modelName in modelFuncDict.keys():
-        for nDataRow in nDataLst:
+#        for nDataRow in nDataLst:
 
-            # Width analysis
-            nData = nDataRow * tStep
-            nTrial = 1
-            taskList += [("width", outpath, nNode, nData, nTrial, dt, modelName)]
+#            # Width analysis
+#            nData = nDataRow * tStep
+#            nTrial = 1
+#            taskList += [("width", outpath, nNode, nData, nTrial, dt, modelName)]
 
-            # Depth analysis
-            nData = tStep
-            nTrial = nDataRow
-            taskList += [("depth", outpath, nNode, nData, nTrial, dt, modelName)]
+#            # Depth analysis
+#            nData = tStep
+#            nTrial = nDataRow
+#            taskList += [("depth", outpath, nNode, nData, nTrial, dt, modelName)]
 
         taskList += [("typical", outpath, nNode, 200, 400, dt, modelName)]
 
