@@ -24,7 +24,7 @@ param = {
     'pTHR'    :  0.01,
     'figExt'  :  '.svg',
     'parTrg'  :  True,
-    'nCore'   :  4,
+    'nCore'   :  6,
     'serial'  :  False,
     'paramLib' : {  # IDTxl parameters
         'dim_order'       : 'rsp',
