@@ -48,28 +48,28 @@ fileInfoDf, fileParams = parse_data_file_names_pandas(dataFileNames)
 # for sweepKey, dataLst, trueConnLst in data_gen:
 #     fc_accuracy_analysis.analysis_width_depth(dataLst, trueConnLst, sweepKey + '.h5', param)
 
-#############################
-# SNR Tests
-#############################
-nStep = 40  # Number of different data sizes to pick
-data_gen = sweep_data_generator(fileInfoDf, dataFileNames, ['typical'], ['dynsys'], fileParams['nNode'])
-
-for sweepKey, dataLst, trueConnLst in data_gen:
-    assert len(dataLst) == 1, "Criteria expected to match only one file at a time"
-    fc_accuracy_analysis.analysis_snr(dataLst[0], trueConnLst[0], nStep, sweepKey + '.h5', param)
-
-# ################
-# # Window
-# ################
-# wMin = 2
-# wMax = 10
-# data_gen = data_sweep_generator(fileInfoDf, dataFileNames, ['typical'], fileParams['model'], fileParams['nNode'])
+# #############################
+# # SNR Tests
+# #############################
+# nStep = 40  # Number of different data sizes to pick
+# data_gen = sweep_data_generator(fileInfoDf, dataFileNames, ['typical'], ['dynsys'], fileParams['nNode'])
 #
 # for sweepKey, dataLst, trueConnLst in data_gen:
 #     assert len(dataLst) == 1, "Criteria expected to match only one file at a time"
-#     fc_accuracy_analysis.analysis_window(dataLst[0], trueConnLst[0], wMin, wMax, sweepKey + '.h5', param)
-#
-#
+#     fc_accuracy_analysis.analysis_snr(dataLst[0], trueConnLst[0], nStep, sweepKey + '.h5', param)
+
+################
+# Window
+################
+wMin = 2
+wMax = 2
+data_gen = sweep_data_generator(fileInfoDf, dataFileNames, ['typical'], fileParams['model'], fileParams['nNode'])
+
+for sweepKey, dataLst, trueConnLst in data_gen:
+    assert len(dataLst) == 1, "Criteria expected to match only one file at a time"
+    fc_accuracy_analysis.analysis_window(dataLst[0], trueConnLst[0], wMin, wMax, sweepKey + '.h5', param)
+
+
 # ################
 # # Lag
 # ################
