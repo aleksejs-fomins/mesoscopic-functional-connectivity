@@ -16,7 +16,7 @@ def write_data_h5(fpath, data, trueConn, param):
         raise ValueError("Got shape", trueConn.shape, "expected", expConnShape)
 
     # Generate output name
-    outfname = os.path.join(fpath, "_".join(param.values()) + ".h5" )
+    outfname = os.path.join(fpath, "_".join([str(v) for v in param.values()]) + ".h5" )
 
 
     # Save to that file
