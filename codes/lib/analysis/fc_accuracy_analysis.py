@@ -31,6 +31,7 @@ def downsample_factor(data, factor, paramDS):
         for iTr in range(nTrial):
             for iNode in range(nNode):
                 data_downsampled[iTr, :, iNode] = resample(fakeTimesOrig, data[iTr, :, iNode], fakeTimesNew, paramDS)
+        return data_downsampled
 
 
 '''
