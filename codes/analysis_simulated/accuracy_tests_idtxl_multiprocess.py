@@ -69,17 +69,17 @@ fileInfoDf, fileParams = parse_data_file_names_pandas(dataFileNames)
 #     assert len(dataLst) == 1, "Criteria expected to match only one file at a time"
 #     fc_accuracy_analysis.analysis_window(dataLst[0], trueConnLst[0], wMin, wMax, sweepKey + '.h5', param)
 
-
-################
-# Lag
-################
-lMin = 1
-lMax = 5
-data_gen = sweep_data_generator(fileInfoDf, dataFileNames, ['typical'], fileParams['model'], fileParams['nNode'])
-
-for sweepKey, dataLst, trueConnLst in data_gen:
-    assert len(dataLst) == 1, "Criteria expected to match only one file at a time"
-    fc_accuracy_analysis.analysis_lag(dataLst[0], trueConnLst[0], lMin, lMax, sweepKey + '.h5', param)
+#
+# ################
+# # Lag
+# ################
+# lMin = 1
+# lMax = 5
+# data_gen = sweep_data_generator(fileInfoDf, dataFileNames, ['typical'], fileParams['model'], fileParams['nNode'])
+#
+# for sweepKey, dataLst, trueConnLst in data_gen:
+#     assert len(dataLst) == 1, "Criteria expected to match only one file at a time"
+#     fc_accuracy_analysis.analysis_lag(dataLst[0], trueConnLst[0], lMin, lMax, sweepKey + '.h5', param)
 
 ################
 # Downsample
