@@ -28,6 +28,8 @@ def downsample_factor(data, factor, paramDS):
 
         data_downsampled = np.zeros((nTrial, nTimeNew, nNode))
 
+        print("Downsampling data of shape", data.shape, "into", data_downsampled.shape)
+
         for iTr in range(nTrial):
             for iNode in range(nNode):
                 data_downsampled[iTr, :, iNode] = resample(fakeTimesOrig, data[iTr, :, iNode], fakeTimesNew, paramDS)

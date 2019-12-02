@@ -1,53 +1,64 @@
-Stated   | Finished | Pr | Eff | Task          | Subtask
+Stated   | Finished | Pr | Eff | Subtask
 --------------------------------------------------------------------------------------
-20.11.19 | 26.11.19 | 5  | 30m | Test          | Plot simulated data, check it looks reasonable
-20.11.19 | 22.11.19 | 5  | 10m | Test          | IDTxl-wrapper
-20.11.19 | 22.11.19 | 5  | 10m | Test          | IDTxl-wrapper-multi
-20.11.19 | 26.11.19 | 5  | 30m | Test          | FC-static
-20.11.19 | 26.11.19 | 5  | 20m | Test          | FC-dynamic
-20.11.19 |          | 5  |     | Test          | Simulated :: Imgs :: BTE with H2 curve
-20.11.19 |          | 3  |     | Test          | Behaviour-analysis-template
-20.11.19 |          | 3  |     | Test          | Analysis-behavioural-neural
-20.11.19 | 20.11.19 | 3  | 20m | fix           | downsample :: optimize :: yaro-behaviour-preprocess
-20.11.19 |          | 3  |     | fix           | downsample :: optimize :: connectomics :: plot_te_rel_diff_nlinks_bydays
-25.11.19 | 27.11.19 | 3  | 10m | Impl          | Refactor fc_generic that first param is not data - synergize with memory decorator
-19.11.19 | 19.11.19 | 4  | 5h  | Impl          | Generic FC parallelization pipeline
-20.11.19 | 20.11.19 | 4  | 30m | Impl          | Generic FC :: CrossCorr, Cross-Spr
-20.11.19 |          | 2  |     | Impl          | Generic FC :: Nifty
-20.11.19 |          | 3  |     | Impl          | Generic FC :: MAR
-20.11.19 |          | 3  |     | Impl          | Generic FC :: DCM (eventually)
-20.11.19 | 21.11.19 | 5  | 3h  | Impl          | Generic FC :: Pipeline via single test :: Taskwriter
-20.11.19 | 21.11.19 | 5  | 30m | Impl          | Generic FC :: Pipeline via single test :: Taskrunner
-20.11.19 | 21.11.19 | 5  | 1h  | Impl          | Generic FC :: Pipeline via single test :: Result stitcher
-20.11.19 |          | 4  |     | Impl          | Mass downsampler - avoid redoing it in mono tasks
-20.11.19 |          | 4  |     | Impl          | RealData :: Suppl_1,2,3 :: Overplot BTE vs MTE
-20.11.19 |          | 4  |     | Impl          | RealData :: Suppl_1,2,3 :: Overplot DS, Lpfsub, noise
-20.11.19 |          | 4  |     | Impl          | RealData :: Suppl_1,2,3 :: Overplot DS, RealData for nData, Lag, DS - one mouse. See if already done in mtp15 - I long forgot
-20.11.19 |          | 2  |     | Refactor      | DynSys -> ChainRateNetwork, incl str names
+                             TESTING
+--------------------------------------------------------------------------------------
+20.11.19 | 26.11.19 | 5  | 30m | Plot simulated data, check it looks reasonable
+20.11.19 | 22.11.19 | 5  | 10m | IDTxl-wrapper
+20.11.19 | 22.11.19 | 5  | 10m | IDTxl-wrapper-multi
+20.11.19 | 26.11.19 | 5  | 30m | FC-static
+20.11.19 | 26.11.19 | 5  | 20m | FC-dynamic
+26.11.19 | 27.11.19 | 5  | 3d  | IDTxl-single-test-pipeline :: Fail, did not solve or produce any output during run
+29.11.19 |          | 5  |     | Simulated :: Imgs :: From File
+20.11.19 |          | 5  |     | Simulated :: Imgs :: BTE with H2 curve
+29.11.19 |          | 5  |     | Simulated :: Imgs :: Overplot routines
+20.11.19 |          | 3  |     | Behaviour-analysis-template
+20.11.19 |          | 3  |     | Analysis-behavioural-neural
+
+--------------------------------------------------------------------------------------
+                             BUGS
+--------------------------------------------------------------------------------------
+29.11.19 |          | 5  |     | Excess runtime & MEM :: Extract single window, test on most basic example :: Send to Patricia
+29.11.19 |          | 5  |     | Single window took 2 days on slurm :: Analyse, run locally, observe usage
+29.11.19 |          | 5  |     | No log written to log files :: try flush, test
+
+--------------------------------------------------------------------------------------
+                             TO IMPLEMENT
+--------------------------------------------------------------------------------------
+19.11.19 | 19.11.19 | 4  | 5h  | Generic FC parallelization pipeline
+20.11.19 | 20.11.19 | 4  | 30m | Generic FC :: CrossCorr, Cross-Spr
+20.11.19 |          | 2  |     | Generic FC :: Nifty
+20.11.19 |          | 3  |     | Generic FC :: MAR
+20.11.19 |          | 3  |     | Generic FC :: DCM (eventually)
+20.11.19 | 21.11.19 | 5  | 3h  | Generic FC :: Pipeline via single test :: Taskwriter
+20.11.19 | 21.11.19 | 5  | 30m | Generic FC :: Pipeline via single test :: Taskrunner
+20.11.19 | 21.11.19 | 5  | 1h  | Generic FC :: Pipeline via single test :: Result stitcher
+20.11.19 |          | 4  |     | Mass downsampler - avoid redoing it in mono tasks
+20.11.19 |          | 4  |     | RealData :: Suppl_1,2,3 :: Overplot BTE vs MTE
+20.11.19 |          | 4  |     | RealData :: Suppl_1,2,3 :: Overplot DS, Lpfsub, noise
+20.11.19 |          | 4  |     | RealData :: Suppl_1,2,3 :: Overplot DS, RealData for nData, Lag, DS - one mouse. See if already done in mtp15 - I long forgot
+20.11.19 | 20.11.19 | 3  | 20m | downsample :: optimize :: yaro-behaviour-preprocess
+20.11.19 |          | 3  |     | downsample :: optimize :: connectomics :: plot_te_rel_diff_nlinks_bydays
+25.11.19 | 27.11.19 | 3  | 10m | Refactor fc_generic that first param is not data - synergize with memory decorator
+20.11.19 |          | 2  |     | Refactor      | Refactor :: DynSys -> ChainRateNetwork, incl str names
+
+--------------------------------------------------------------------------------------
+                             Run Code
+--------------------------------------------------------------------------------------
 20.11.19 |          | 5  |     | GenData       | Depth, Width for lag 1-5
-20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: SNR        :: GaussianCMI
-20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: Window     :: GaussianCMI
-20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: Lag        :: GaussianCMI
-20.11.19 |          | 4  |     | IDTxl-sweep   | RealData :: TE :: GaussianCMI :: Single Mouse (12,48) :: SNR, Window, Lag, DS
-20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: MI :: GaussianCMI, KraskovCMI - Lag 0
-20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: TE :: GaussianCMI, KraskovCMI - Lag 1
-20.11.19 |          | 5  |     | IDTxl-sweep   | RealData :: TE :: KraskovCMI - Lag 4
-20.11.19 |          | 5  |     | IDTxl-sweep   | Simulated :: Downsample :: GaussianCMI
-20.11.19 |          | 3  |     | IDTxl-sweep   | Simulated :: Downsample :: int-avg vs kernel
-20.11.19 |          | 4  |     | Investigate   | Simulated :: Downsample :: Effect of Lag
-20.11.19 |          | 4  |     | Investigate   | Simulated :: Downsample :: Effect of more complex system
-20.11.19 |          | 3  |     | Investigate   | Deconvolution :: Feasibility
-
-For real vs simulated analysis
-* Rewrite fc_accuracy_analysis
-  * Separate Pandas Loop from analysis
-     * Design mask-based generator for simulated
-  * Do not plot in analysis, only save h5
+20.11.19 |          | 5  |     | IDTxl-sweep :: Simulated :: SNR        :: GaussianCMI
+20.11.19 |          | 5  |     | IDTxl-sweep :: Simulated :: Window     :: GaussianCMI
+20.11.19 |          | 5  |     | IDTxl-sweep :: Simulated :: Lag        :: GaussianCMI
+20.11.19 |          | 4  |     | IDTxl-sweep :: Simulated :: Downsample :: GaussianCMI
+20.11.19 |          | 2  |     | IDTxl-sweep :: Simulated :: Downsample :: int-avg vs kernel
+20.11.19 |          | 4  |     | IDTxl-sweep :: RealData :: TE :: GaussianCMI :: Single Mouse (12,48) :: SNR, Window, Lag, DS
+20.11.19 |          | 5  |     | IDTxl-sweep :: RealData :: MI :: GaussianCMI, KraskovCMI - Lag 0
+20.11.19 |          | 5  |     | IDTxl-sweep :: RealData :: TE :: GaussianCMI, KraskovCMI - Lag 1
+20.11.19 |          | 5  |     | IDTxl-sweep :: RealData :: TE :: KraskovCMI - Lag 4
 
 
-Status-Memory-Leak:
-* IDTxl - Gaussian              : Increase after every call to analyse_single target. Increases decay, and reach fixed memory at which stops. Worse in parallel
-* IDTxl - Kraskov               : Effect the same, magnitude much worse
-* OpenCL - MESA - Kraskov       : Small overhead
-* Plain code                    : No leak
-* Multiprocessing data pass     : No leak
+--------------------------------------------------------------------------------------
+                             Long-Term
+--------------------------------------------------------------------------------------
+20.11.19 |          | 4  |     | IDTxl-sweep :: Simulated :: Downsample :: Effect of Lag
+20.11.19 |          | 4  |     | IDTxl-sweep :: Simulated :: Downsample :: Effect of more complex system
+20.11.19 |          | 3  |     | Deconvolution :: Feasibility

@@ -69,12 +69,17 @@ def read_fc_h5(h5_fname, methods):
         rezDict['xparam'] = np.copy(h5f['metadata']['xparam'])
         rezDict['connTrue'] = np.copy(h5f['metadata']['connTrue'])
 
+        print(list(h5f.keys()))
+
         for method in methods:
+            if method in h5f.keys():
                 rezDict[method] = [
                     np.copy(h5f[method]['TE_table']),
                     np.copy(h5f[method]['delay_table']),
                     np.copy(h5f[method]['p_table'])
                 ]
+            else:
+                print(method, "data not found in", h5_fname)
 
         return rezDict
 

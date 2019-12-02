@@ -15,12 +15,12 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
 #         'out degree'              : graph_lib.degree_out,
 #         'total degree'            : graph_lib.degree_tot,
 #         'reciprocal degree'       : graph_lib.degree_rec,
-        'cc-total-normalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=True)),
-        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=False)),
-        'cc-in-normalized'        : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=True)),
-        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=False)),
-        'cc-out-normalized'       : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=True)),
-        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
+        'cc-total-normalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'        : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=False)),
+        'cc-out-normalized'       : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
     }
     
     nMetrics = len(binaryMetrics)
@@ -73,12 +73,12 @@ def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, tim
 #         'out degree'              : graph_lib.degree_out,
 #         'total degree'            : graph_lib.degree_tot,
 #         'reciprocal degree'       : graph_lib.degree_rec,
-        'cc-total-normalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=True)),
-        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=False)),
-        'cc-in-normalized'        : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=True)),
-        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=False)),
-        'cc-out-normalized'       : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=True)),
-        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
+        'cc-total-normalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'        : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=False)),
+        'cc-out-normalized'       : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
     }
     
     
@@ -129,12 +129,12 @@ def plot_te_binary_metrics_rangebydays(outname, timesLst, dataLst, labelLst, ran
 #         'out degree'              : graph_lib.degree_out,
 #         'total degree'            : graph_lib.degree_tot,
 #         'reciprocal degree'       : graph_lib.degree_rec,
-        'cc-total-normalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=True)),
-        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=False)),
-        'cc-in-normalized'        : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=True)),
-        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=False)),
-        'cc-out-normalized'       : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=True)),
-        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
+        'cc-total-normalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized'   : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'        : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'      : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=False)),
+        'cc-out-normalized'       : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
     }
     
     nMetrics = len(binaryMetrics)
@@ -200,12 +200,12 @@ def plot_te_float_metrics_rangebydays(outname, timesLst, dataLst, labelLst, rang
         #         'out degree'              : graph_lib.degree_out,
         #         'total degree'            : graph_lib.degree_tot,
         #         'reciprocal degree'       : graph_lib.degree_rec,
-        'cc-total-normalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=True)),
-        'cc-total-unnormalized' : lambda M: np.mean(graph_lib.cl_coeff(M, kind='tot', normDegree=False)),
-        'cc-in-normalized'      : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=True)),
-        'cc-in-unnormalized'    : lambda M: np.mean(graph_lib.cl_coeff(M, kind='in', normDegree=False)),
-        'cc-out-normalized'     : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=True)),
-        'cc-out-unnormalized'   : lambda M: np.mean(graph_lib.cl_coeff(M, kind='out', normDegree=False))
+        'cc-total-normalized'   : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized' : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'      : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'    : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=False)),
+        'cc-out-normalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'   : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
     }
 
     nMetrics = len(floatMetrics)

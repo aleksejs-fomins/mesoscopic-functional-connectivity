@@ -1,5 +1,5 @@
 import numpy as np
-import networkx
+import networkx as nx
 
 
 # Return index of diagonal elements of a square matrix
@@ -94,8 +94,41 @@ def avg_geom(v):
     return np.prod(v) ** (1 / len(v))
 
 
+def matrix_make_symm(M, either=True):
+    if either:
+        # Assuming undirected link has to be present at least in one direction
+        if M.dtype == bool:
+            return M or M.T
+        else:
+            return np.nanmean([M, M.T], axis=0) # nanmean sets result to NAN only if both are NAN
+    else:
+        # Assuming undirected link has to be present in both directions
+        if M.dtype == bool:
+            return M & M.T
+        else:
+            return np.mean([M, M.T], axis=0)   # Mean sets result to NAN if at least one entry is NAN
+
+
+# Largest Connected Component - A measure for undirected binary graph
+# https://networkx.github.io/documentation/networkx-1.10/reference/generated/networkx.algorithms.components.connected.connected_components.html
+def largest_connected_component(M):
+    assert M.dtype == bool, "Only Defined for binary graphs"
+    assert M == M.T, "Only defined for undirected graphs"
+    G = nx.from_numpy_matrix(M)
+    return max(nx.connected_components(G), key=len)
+
+
+# Rich-Club Coefficient -  A measure for undirected binary graph
+# https://networkx.github.io/documentation/latest/reference/algorithms/generated/networkx.algorithms.richclub.rich_club_coefficient.html
+def rich_club_coefficient(M, normalized=False):
+    assert M.dtype == bool, "Only Defined for binary graphs"
+    assert M == M.T, "Only defined for undirected graphs"
+    G = nx.from_numpy_matrix(M)
+    return nx.rich_club_coefficient(G, normalized=normalized)
+
+
 # https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.cluster.clustering.html
-def cl_coeff(M, kind='tot', normDegree=True):
+def clustering_coefficient(M, kind='tot', normDegree=True):
     nNode = M.shape[0]
     
     # Check if matrix is nonzero, find maximum, normalize
@@ -151,5 +184,3 @@ def cl_coeff(M, kind='tot', normDegree=True):
         Cv /= nComb * nMaxTriPerNode
     
     return Cv
-        
-        

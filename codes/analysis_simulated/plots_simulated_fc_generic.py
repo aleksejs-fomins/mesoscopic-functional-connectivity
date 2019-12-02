@@ -27,12 +27,13 @@ methods = ['BivariateMI', 'MultivariateMI', 'BivariateTE', 'MultivariateTE']
 
 dataParamsDict = {
     "analysis"  : ["width", "depth", "snr", "window", "lag", "downsample"],
-    "logx"      : [True, True, True, False, False, False],
+    "logx"      : [True, True, False, False, False, False],
 }
 
 # Determine analysis type and associated params
 def parse_analysis_type(fname):
-    testType = [key in fname for key in dataParamsDict['analysis']]
+    basename = os.path.basename(fname)
+    testType = [key in basename for key in dataParamsDict['analysis']]
     if np.sum(testType) != 1:
         raise ValueError(fname, "matched", np.sum(testType), "analysis types")
 

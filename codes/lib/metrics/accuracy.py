@@ -7,13 +7,13 @@ from codes.lib.metrics.graph_lib import offdiag_idx
 # If both are zero, return zero
 # Complain if values are inadequate
 def rate_0_protected(nArrSub, nArrTot):
-    assert np.sum(nArrSub < 0) == 0,       "Only non-negative arrays allowed"
-    assert np.sum(nArrTot < 0) == 0,       "Only non-negative arrays allowed"
-    assert np.sum(nArrTot < nArrSub) == 0, "Subset can't have greater size than the whole set"
+    assert ~np.any(nArrSub < 0),       "Only non-negative arrays allowed"
+    assert ~np.any(nArrTot < 0),       "Only non-negative arrays allowed"
+    assert ~np.any(nArrTot < nArrSub), "Subset can't have greater size than the whole set"
 
-    nTotZeroIdx = nArrTot == 0
+    nonZeroIdx = nArrTot != 0
     rez = np.copy(nArrSub)
-    rez[nTotZeroIdx] /= nArrTot[nTotZeroIdx]
+    rez[nonZeroIdx] /= nArrTot[nonZeroIdx]
     return rez
 
 
@@ -40,10 +40,10 @@ def accuracyIndices(yHat, y):
 def accuracyTests(yHat, y, axis=0):
     yReal, idxsDict = accuracyIndices(yHat, y)
 
-    freqTrue     = np.mean(yReal, axis=axis)      # Frequency of true outcomes
-    freqFalse    = np.mean(yHat, axis=axis)       # Frequency of false outcomes
-    freqHatTrue  = np.mean(yReal, axis=axis)      # Frequency of true predictions
-    freqHatFalse = np.mean(yHat, axis=axis)       # Frequency of false predictions
+    freqTrue     = np.mean(yReal, axis=axis)    # Frequency of true outcomes
+    freqHatTrue  = np.mean(yHat, axis=axis)     # Frequency of true predictions
+    freqFalse    = 1 - freqTrue                 # Frequency of false outcomes
+    freqHatFalse = 1 - freqHatTrue              # Frequency of false predictions
 
     freqTP = np.mean(idxsDict['TP'], axis=axis)   # Frequency of True Positives
     freqFP = np.mean(idxsDict['FP'], axis=axis)   # Frequency of False Positives
