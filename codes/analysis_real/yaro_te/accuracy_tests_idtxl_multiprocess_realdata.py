@@ -37,32 +37,35 @@ param = {
 
 fpath_realdata = gui_fpath("Get real data filepath", "./")
 data, behaviour, performance = read_neuro_perf(fpath_realdata)
-dataGo = data[np.array(behaviour["iGO"], dtype=int) - 1]
-dataBaseName = "realdata"
 
-#############################
-# SNR Tests
-#############################
-nStep = 40  # Number of different data sizes to pick
-fc_accuracy_analysis.analysis_snr(dataGo, None, nStep, dataBaseName + '.h5', param)
+for trialType in ["iGO", "iNOGO"]:
+    dataTrial = data[np.array(behaviour["iGO"], dtype=int) - 1]
+    print("For", trialType, "have shape", dataTrial.shape)
+    dataBaseName = "realdata"
 
-################
-# Window
-################
-wMin = 2
-wMax = 10
-fc_accuracy_analysis.analysis_window(dataGo, None, wMin, wMax, dataBaseName + '.h5', param)
+    #############################
+    # SNR Tests
+    #############################
+    nStep = 40  # Number of different data sizes to pick
+    fc_accuracy_analysis.analysis_snr(dataTrial, None, nStep, dataBaseName + '.h5', param)
+
+    ################
+    # Window
+    ################
+    wMin = 2
+    wMax = 10
+    fc_accuracy_analysis.analysis_window(dataTrial, None, wMin, wMax, dataBaseName + '.h5', param)
 
 
-################
-# Lag
-################
-lMin = 1
-lMax = 5
-fc_accuracy_analysis.analysis_lag(dataGo, None, lMin, lMax, dataBaseName + '.h5', param)
+    ################
+    # Lag
+    ################
+    lMin = 1
+    lMax = 5
+    fc_accuracy_analysis.analysis_lag(dataTrial, None, lMin, lMax, dataBaseName + '.h5', param)
 
-################
-# Downsample
-################
-downsampleFactors = [1,2,4,6,8,10,12]
-fc_accuracy_analysis.analysis_downsample(dataGo, None, downsampleFactors, dataBaseName + '.h5', param)
+    ################
+    # Downsample
+    ################
+    downsampleFactors = [1,2,4,6,8,10,12]
+    fc_accuracy_analysis.analysis_downsample(dataTrial, None, downsampleFactors, dataBaseName + '.h5', param)
