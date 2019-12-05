@@ -21,7 +21,7 @@ param = {
     'pTHR'    :  0.01,
     'figExt'  :  '.svg',
     'parTrg'  :  True,
-    'nCore'   :  4,
+    'nCore'   :  16,
     'serial'  :  False,
     'paramLib' : {  # IDTxl parameters
         'dim_order'       : 'rsp',
@@ -30,6 +30,10 @@ param = {
         'min_lag_sources' : 1
     }
 }
+
+startTime = 3.0  # Seconds, time at which to start analyzing data
+timestep = 0.05  # Seconds, neuronal recording timestep
+startStep = int(startTime / timestep)  # Timestep at which to start analysis
 
 #############################
 # Load and read data file
@@ -41,20 +45,22 @@ data, behaviour, performance = read_neuro_perf(fpath_realdata)
 for trialType in ["iGO", "iNOGO"]:
     dataTrial = data[np.array(behaviour["iGO"], dtype=int) - 1]
     print("For", trialType, "have shape", dataTrial.shape)
-    dataBaseName = "realdata"
+    dataTrial = dataTrial[:, startStep:, :]
+    print("After shifting the data by", startStep, "timesteps, the new shape is", dataTrial.shape)
+    outnameH5 = trialType + "_realdata.h5"
 
     #############################
     # SNR Tests
     #############################
     nStep = 40  # Number of different data sizes to pick
-    fc_accuracy_analysis.analysis_snr(dataTrial, None, nStep, dataBaseName + '.h5', param)
+    fc_accuracy_analysis.analysis_snr(dataTrial, None, nStep, outnameH5, param)
 
     ################
     # Window
     ################
     wMin = 2
     wMax = 10
-    fc_accuracy_analysis.analysis_window(dataTrial, None, wMin, wMax, dataBaseName + '.h5', param)
+    fc_accuracy_analysis.analysis_window(dataTrial, None, wMin, wMax, outnameH5, param)
 
 
     ################
@@ -62,10 +68,10 @@ for trialType in ["iGO", "iNOGO"]:
     ################
     lMin = 1
     lMax = 5
-    fc_accuracy_analysis.analysis_lag(dataTrial, None, lMin, lMax, dataBaseName + '.h5', param)
+    fc_accuracy_analysis.analysis_lag(dataTrial, None, lMin, lMax, outnameH5, param)
 
     ################
     # Downsample
     ################
     downsampleFactors = [1,2,4,6,8,10,12]
-    fc_accuracy_analysis.analysis_downsample(dataTrial, None, downsampleFactors, dataBaseName + '.h5', param)
+    fc_accuracy_analysis.analysis_downsample(dataTrial, None, downsampleFactors, outnameH5, param)
