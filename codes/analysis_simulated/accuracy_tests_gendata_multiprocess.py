@@ -121,7 +121,7 @@ outpath = gui_fpath("Select output path", "./")
 nNodeLst = [12, 48]
 dt = 0.05   # 50ms, Yaro non-downsampled temporal resolution
 nStep = 40  # Number of different data sizes to pick
-tStep = 2   # Minimal number of time steps
+tStep = 6   # Minimal number of time steps
 nDataLst = (2 * 10 ** (np.linspace(1.6, 2.9, nStep))).astype(int)#[-3:]
 
 taskList = []
@@ -129,23 +129,23 @@ taskList = []
 # Generate task list
 for nNode in nNodeLst:
     for modelName in modelFuncDict.keys():
-#        for nDataRow in nDataLst:
+       for nDataRow in nDataLst:
 
-#            # Width analysis
-#            nData = nDataRow * tStep
-#            nTrial = 1
-#            taskList += [("width", outpath, nNode, nData, nTrial, dt, modelName)]
+           # Width analysis
+           nData = nDataRow * tStep
+           nTrial = 1
+           taskList += [("width", outpath, nNode, nData, nTrial, dt, modelName)]
 
-#            # Depth analysis
-#            nData = tStep
-#            nTrial = nDataRow
-#            taskList += [("depth", outpath, nNode, nData, nTrial, dt, modelName)]
+           # Depth analysis
+           nData = tStep
+           nTrial = nDataRow
+           taskList += [("depth", outpath, nNode, nData, nTrial, dt, modelName)]
 
-        taskList += [("typical", outpath, nNode, 200, 400, dt, modelName)]
+#        taskList += [("typical", outpath, nNode, 200, 400, dt, modelName)]
 
 # Compute all tasks in parallel
 #nCore = pathos.multiprocessing.cpu_count() - 1
-nCore = 4
+nCore = 6
 print("Using nCores", nCore)
 pool = pathos.multiprocessing.ProcessingPool(nCore)
 rez_multilst = pool.map(processTask, taskList)

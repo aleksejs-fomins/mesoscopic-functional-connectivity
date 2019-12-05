@@ -39,7 +39,7 @@ Stated   | Finished | Pr | Eff | Subtask
 20.11.19 | 20.11.19 | 3  | 20m | downsample :: optimize :: yaro-behaviour-preprocess
 20.11.19 |          | 3  |     | downsample :: optimize :: connectomics :: plot_te_rel_diff_nlinks_bydays
 25.11.19 | 27.11.19 | 3  | 10m | Refactor fc_generic that first param is not data - synergize with memory decorator
-20.11.19 |          | 2  |     | Refactor      | Refactor :: DynSys -> ChainRateNetwork, incl str names
+20.11.19 |          | 2  |     | Refactor :: DynSys -> ChainRateNetwork, incl str names
 
 --------------------------------------------------------------------------------------
                              Run Code
