@@ -43,7 +43,7 @@ fpath_realdata = gui_fpath("Get real data filepath", "./")
 data, behaviour, performance = read_neuro_perf(fpath_realdata)
 
 for trialType in ["iGO", "iNOGO"]:
-    dataTrial = data[np.array(behaviour["iGO"], dtype=int) - 1]
+    dataTrial = data[np.array(behaviour[trialType], dtype=int) - 1]
     print("For", trialType, "have shape", dataTrial.shape)
     dataTrial = dataTrial[:, startStep:, :]
     print("After shifting the data by", startStep, "timesteps, the new shape is", dataTrial.shape)

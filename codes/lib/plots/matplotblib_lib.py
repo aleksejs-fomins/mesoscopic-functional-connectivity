@@ -11,6 +11,7 @@ def hist_int(ax, x, labels=None, xmin=None, xmax=None):
     xmin = np.min(x) if xmin is None else xmin
     xmax = np.max(x) if xmax is None else xmax
 
+    print(xmin, xmax)
     bins = np.arange(xmin, xmax + 1)
     bins_ext = np.arange(xmin - 1, xmax + 1) + 0.5
 

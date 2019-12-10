@@ -17,12 +17,14 @@ def setmask(arr, mask, val):
     return arrNew
 
 
+# Plot 1D curve with shaded 1D error region
 def errorPlot(ax, x, yReal, yErr, label, color, logx=True):
     plotfuncLinY(ax, logx)(x, yReal, color=color, label=label)
     ax.fill_between(x, yReal-yErr, yReal+yErr, alpha=0.3, edgecolor=color, facecolor=color, antialiased=True)
 
 
-def errorPlotExtended(ax, x, data, mask, logx, label, color, axis=0):
+# Switch between shaded error region and scatter plot depending on point quantity
+def errorPlotExtended(ax, x, data, mask, logx, label, color='b', axis=0):
     connFreq = np.mean(np.sum(mask, axis=axis))
 
     if connFreq > 3:
@@ -37,7 +39,7 @@ def errorPlotExtended(ax, x, data, mask, logx, label, color, axis=0):
         plotfuncLinY(ax, logx)(xArr, yArr, '.', color=color, label=label)
 
 
-# Create test plots directily from data, maybe saving to h5
+# Create generic test plots, comparing connectivity in data with true connectivity
 def fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=True, percenty=False, fig_fname=None):
     #####################################
     # Analysis
@@ -77,6 +79,7 @@ def fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=True, percent
     # Lag statistics
     minLag = 0
     maxLag = np.nanmax(lag)
+    maxLag = maxLag if (maxLag is not None) and not np.isnan(maxLag) else 1
     lag1DoffDiag = offdiag_1D(lag)
     if doPlotFP:
         lagsFP = lag1DoffDiag[errIdxsDict['FP']]  # Lags of FP connections
@@ -146,6 +149,92 @@ def fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=True, percent
         hist_int(ax[0][2], [lagsTP, lagsFP], labels=['TP', 'FP'], xmin=minLag, xmax=maxLag)
     else:
         hist_int(ax[0][2], [lagsFP], labels=['FP'], xmin=minLag, xmax=maxLag)
+
+    ###############################
+    # Save figure
+    ###############################
+    if fig_fname is not None:
+        plt.savefig(fig_fname, dpi=300)
+    else:
+        plt.show()
+
+
+# Create generic test plots based purely on measured connectivity, no ground truth
+def fc_accuracy_plots_notrue(xparam, fcData, method, pTHR, logx=True, percenty=False, fig_fname=None):
+    #####################################
+    # Analysis
+    #####################################
+
+    # Copy data to avoid modifying originals
+    te, lag, p = np.copy(fcData)
+    nNode, _, nStep = te.shape
+
+    #  Find which connections have high confidence
+    isConnConf          = is_conn(p, pTHR)
+    isConnConfOffdiag1D = offdiag_1D(isConnConf)
+
+    # Delete all connections that have too high p-value
+    # Set values of all other connections to NAN
+    te[~isConnConf] = np.nan
+    lag[~isConnConf] = np.nan
+    p[~isConnConf] = np.nan
+
+    # Compute statistics
+    connFreqByTime = np.mean(isConnConfOffdiag1D, axis=0)
+    connFreqByChannel = np.mean(isConnConf, axis=2)
+
+    # TE statistics
+    te1DoffDiag = offdiag_1D(te)
+    p1DoffDiag = offdiag_1D(p)
+
+    # Lag statistics
+    minLag = 0
+    maxLag = np.nanmax(lag)
+    maxLag = maxLag if (maxLag is not None) and not np.isnan(maxLag) else 1
+    lagsConfFlat = lag[isConnConf]
+    # Note that for FN and TN lags don't exist, since no connections were found
+
+    #####################################
+    # Plots
+    #####################################
+
+    fig, ax = plt.subplots(nrows=2, ncols=3, figsize=(15, 10))
+
+    ###############################
+    # Error rates
+    ###############################
+    ax[0][0].set_title("Connection frequencies")
+
+    plotfuncLogY(ax[0][0], logx)(xparam, connFreqByTime, '.-')
+
+    if percenty:  # Write y-axis as percent
+        set_percent_axis_y(ax[0][0])
+
+    ###############################
+    # Connectivity
+    ###############################
+    ax[1][1].set_title("Frequencies of connections")
+    img11 = ax[1][1].imshow(connFreqByChannel, vmin=0, vmax=1)
+    imshowAddColorBar(fig, ax[1][1], img11)
+
+    ###############################
+    # TE values
+    ###############################
+    ax[1][0].set_title("TE for each connection")
+    errorPlotExtended(ax[1][0], xparam, te1DoffDiag, isConnConfOffdiag1D, logx, None, axis=0)
+    # Note that for FN and TN p-values don't exist, since no connections were found
+
+    ###############################
+    # P-values
+    ###############################
+    ax[1][2].set_title("Mean p-value")
+    errorPlotExtended(ax[1][2], xparam, p1DoffDiag, isConnConfOffdiag1D, logx, None, axis=0)
+
+    ###############################
+    # Lags
+    ###############################
+    ax[0][2].set_title("lag distribution")
+    hist_int(ax[0][2], lagsConfFlat, xmin=minLag, xmax=maxLag)
 
     ###############################
     # Save figure

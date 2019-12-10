@@ -66,10 +66,11 @@ def read_fc_h5(h5_fname, methods):
     with h5py.File(h5_fname, "r") as h5f:
         rezDict = {}
 
-        rezDict['xparam'] = np.copy(h5f['metadata']['xparam'])
-        rezDict['connTrue'] = np.copy(h5f['metadata']['connTrue'])
-
-        print(list(h5f.keys()))
+        if 'metadata' in h5f.keys():
+            if 'xparam' in h5f['metadata'].keys():
+                rezDict['xparam'] = np.copy(h5f['metadata']['xparam'])
+            if 'connTrue' in h5f['metadata'].keys():
+                rezDict['connTrue'] = np.copy(h5f['metadata']['connTrue'])
 
         for method in methods:
             if method in h5f.keys():
