@@ -1,0 +1,16 @@
+TODO-Yaro-Code:
+
+[] Import-export matrix using python - much faster for us.
+[] Get minimal TE selftest code
+  [+] Trial-based
+  [] Time-based
+[] Check using random connectivity
+  [] imshow number of timesteps for which TE > const for a few consts
+    [] Check which cutoff Yaro uses, try that
+[] Check using basic DynSys test
+
+Problems with code:
+
+* Only 1 past value in TE ???  Is it correct that max of one past value TE over all values of DT is the same as TE conditioned on all of those values??
+* Why subtract embedding dim? Test how it behaves with and without
+* Does Yaro know there is V2 of the NiFty code?
