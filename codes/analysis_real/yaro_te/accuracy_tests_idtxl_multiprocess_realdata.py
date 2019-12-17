@@ -21,7 +21,7 @@ param = {
     'pTHR'    :  0.01,
     'figExt'  :  '.svg',
     'parTrg'  :  True,
-    'nCore'   :  16,
+    'nCore'   :  None,
     'serial'  :  False,
     'paramLib' : {  # IDTxl parameters
         'dim_order'       : 'rsp',
@@ -42,7 +42,7 @@ startStep = int(startTime / timestep)  # Timestep at which to start analysis
 fpath_realdata = gui_fpath("Get real data filepath", "./")
 data, behaviour, performance = read_neuro_perf(fpath_realdata)
 
-for trialType in ["iGO", "iNOGO"]:
+for trialType in ["iNOGO"]:
     dataTrial = data[np.array(behaviour[trialType], dtype=int) - 1]
     print("For", trialType, "have shape", dataTrial.shape)
     dataTrial = dataTrial[:, startStep:, :]
