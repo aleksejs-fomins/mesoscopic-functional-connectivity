@@ -1,11 +1,12 @@
+import h5py
 import os, sys
-from datetime import datetime
 import numpy as np
-import scipy.io
 
-from codes.lib.data_io.os_lib import get_subfolders
+from codes.lib.metrics.mouse_performance import mouse_performance_single_session
+#from codes.lib.data_io.os_lib import get_subfolders
 from codes.lib.data_io.matlab_lib import loadmat, matstruct2dict
 from codes.lib.aux_functions import merge_dicts
+
 
 # Read data and behaviour matlab files given containing folder
 def read_neuro_perf(folderpath, verbose=True):
@@ -18,17 +19,18 @@ def read_neuro_perf(folderpath, verbose=True):
     
     waitRetry = 3  # Seconds wait before trying to reload the file if it is not accessible
     data        = loadmat(fname_data, waitRetry=waitRetry)['data']
+    nTrialsData = data.shape[0]
     behavior    = loadmat(fname_behaviour, waitRetry=waitRetry)
-    
+    behavior = {k : v for k, v in behavior.items() if k[0] != '_'}      # Get rid of useless fields in behaviour
+    performance = mouse_performance_single_session(nTrialsData, behavior)
+
     if not os.path.exists(fpath_performance):
-        print("--Warning: No performance metrics found for", os.path.dirname(folderpath), "returning, None")
-        performance = None
+        print("--Warning: No performance metrics found for", os.path.dirname(folderpath), "; Using calculated")
     else:
         fname_performance = os.path.join(fpath_performance, "performance.mat")
-        performance = loadmat(fname_performance, waitRetry=waitRetry)['performance']
-    
-    # Get rid of useless fields in behaviour
-    behavior = {k : v for k, v in behavior.items() if k[0] != '_'}
+        performanceExt = loadmat(fname_performance, waitRetry=waitRetry)['performance']
+        if performanceExt != performance:
+            print("Calculated performance", performance, "does not match external", performanceExt)
     
     # Convert trials structure to a dictionary
     behavior['trials'] = merge_dicts([matstruct2dict(obj) for obj in behavior['trials']])
@@ -39,7 +41,6 @@ def read_neuro_perf(folderpath, verbose=True):
     # behavior['trials'] = d_trials
     
     # CONSISTENCY TEST 1 - If behavioural trials are more than neuronal, crop:
-    dataNTrials = data.shape[0]
     behavToArray = lambda b: np.array([b], dtype=int) if type(b)==int else b   # If array has 1 index it appears as a number :(
     behKeys = ['iGO', 'iNOGO', 'iFA', 'iMISS']
     for behKey in behKeys:
@@ -48,15 +49,15 @@ def read_neuro_perf(folderpath, verbose=True):
         behNTrialsThis = len(behArray)
         if behNTrialsThis > 0:
             behMaxIdxThis  = np.max(behArray) - 1  # Note Matlab indices start from 1            
-            if behMaxIdxThis >= dataNTrials:
-                print("--Warning: For", behKey, "behaviour max index", behMaxIdxThis, "exceeds nTrials", dataNTrials)
-                behavior[behKey] = behavior[behKey][behavior[behKey] < dataNTrials]
+            if behMaxIdxThis >= nTrialsData:
+                print("--Warning: For", behKey, "behaviour max index", behMaxIdxThis, "exceeds nTrials", nTrialsData)
+                behavior[behKey] = behavior[behKey][behavior[behKey] < nTrialsData]
                 print("---Cropped excessive behaviour trials from", behNTrialsThis, "to", len(behavior[behKey]))
             
     # CONSISTENCY TEST 2 - If neuronal trials are more than behavioural
     # Note that there are other keys except the above four, so data trials may be more than those for the four keys
     behIndices = [idx for key in behKeys for idx in behavToArray(behavior[key])]
-    assert len(behIndices) <= dataNTrials, "After cropping behavioural trials may not exceed data trials"
+    assert len(behIndices) <= nTrialsData, "After cropping behavioural trials may not exceed data trials"
     
     # CONSISTENCY TEST 3 - Test behavioural indices for duplicates
     for idx in behIndices:
@@ -70,29 +71,29 @@ def read_neuro_perf(folderpath, verbose=True):
     return data, behavior, performance
 
 
-# Read multiple neuro and performance files from a root folder
-def read_neuro_perf_multi(rootpath):
-    
-    # Get all subfolders, mark them as mice
-    mice = get_subfolders(rootpath)
-    micedict = {}
-    
-    # For each mouse, get all subfolders, mark them as days
-    for mouse in mice:
-        mousepath = os.path.join(rootpath, mouse)
-        days = get_subfolders(mousepath)
-        micedict[mouse] = {day : {} for day in days}
-
-        # For each day, read mat files
-        for day in days:
-            daypath = os.path.join(mousepath, day)
-            data, behaviour = read_neuro_perf(daypath)
-            micedict[mouse][day] = {
-                'data' : data,
-                'behaviour' : behaviour
-            }
-            
-    return micedict
+# # Read multiple neuro and performance files from a root folder
+# def read_neuro_perf_multi(rootpath):
+#
+#     # Get all subfolders, mark them as mice
+#     mice = get_subfolders(rootpath)
+#     micedict = {}
+#
+#     # For each mouse, get all subfolders, mark them as days
+#     for mouse in mice:
+#         mousepath = os.path.join(rootpath, mouse)
+#         days = get_subfolders(mousepath)
+#         micedict[mouse] = {day : {} for day in days}
+#
+#         # For each day, read mat files
+#         for day in days:
+#             daypath = os.path.join(mousepath, day)
+#             data, behaviour = read_neuro_perf(daypath)
+#             micedict[mouse][day] = {
+#                 'data' : data,
+#                 'behaviour' : behaviour
+#             }
+#
+#     return micedict
 
 
 def read_lick(folderpath, verbose=True):
@@ -235,3 +236,45 @@ def read_lvm(filename, verbose=True):
         
     print("... done! Data shape read ", data2D.shape)
     return data2D
+
+
+# Extract TE from H5 file
+def readTE_H5(fname, summary):
+    # print("Reading file", fname)
+    # filename = os.path.join(pwd_h5, os.path.join("real_data", fname))
+    # h5f = h5py.File(filename, "r")
+    h5f = h5py.File(fname, "r")
+    data = np.array([
+        np.copy(h5f['results']['TE_table']),
+        np.copy(h5f['results']['delay_table']),
+        np.copy(h5f['results']['p_table'])
+    ])
+    h5f.close()
+
+    # Crop data based on delay and window
+
+    # Based on max lag and averaging time window
+    #  some initial and final time steps of the data
+    #  are essentialy not computed. First verify that
+    #  they are indeed not computed, then crop them
+    N_TIMES = data.shape[-1]
+    GAP_L = summary["max_lag"]
+    GAP_R = summary["window"] - summary["max_lag"] - 1
+    if (GAP_L <= 0) or (GAP_R < 0):
+        raise ValueError("Incompatible window and maxlag values ", summary["window"], summary["max_lag"])
+
+    conn_L = np.sum(1 - np.isnan(data[..., :GAP_L]))
+    if conn_L > 0:
+        raise ValueError("While maxlag is", GAP_L, "found", conn_L, "non-nan connections in the first", GAP_L,
+                         "timesteps")
+
+    if GAP_R > 0:
+        conn_R = np.sum(1 - np.isnan(data[..., N_TIMES - GAP_R:]))
+        if conn_R > 0:
+            raise ValueError("While win-lag-1 is", GAP_R, "found", conn_R, "non-nan connections in the last", GAP_R,
+                             "timesteps")
+
+    # Compute effective sampling times
+    times = summary["timestep"] * (np.arange(GAP_L, N_TIMES - GAP_R) + GAP_R / 2)
+
+    return times, data[..., GAP_L:N_TIMES - GAP_R]

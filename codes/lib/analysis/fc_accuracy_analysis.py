@@ -80,6 +80,9 @@ def wrapper_multiparam(dataLst, param):
 
 
 # Write calculated FC data to file, making a new group for every method used
+# Saving convention for DATA = [3 x nSrc x nTrg x nData]
+# Saving convention for conn2D = [nSrc x nTrg]
+# Saving convention for conn3D = [nData x nSrc x nTrg]
 def wrapper_filewrite(xLst, rezIDTxl, connTrue, fname_h5, param):
     for iMethod, method in enumerate(param['methods']):
         fcData = rezIDTxl[method].transpose((1,2,3,0))

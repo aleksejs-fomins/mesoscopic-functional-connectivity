@@ -422,7 +422,78 @@ def plot_te_distribution_rangebydays(outname, dataLst, labelLst, rangesSec, pTHR
     ax.legend()
     plt.savefig(outname)
     plt.close()
-    
+
+
+def plot_te_distribution_avgbyperformance(dataDB, outname=None, show=True):
+    meanTE = {}
+    meanNConnConf = {}
+    expertMap = {True: "Expert", False: "Naive"}
+
+    for idx, row in dataDB.metaDataFrames['TE'].iterrows():
+        # Extract parameters from dataframe
+        trial = row['trial']
+        method = row['method']
+        mousekey = row['mousekey']
+
+        # Find corresponding data file, extract performance
+        dataRowsFiltered = dataDB.get_neuro_rows({'mousekey' : mousekey})
+        nRows = dataRowsFiltered.shape[0]
+        if nRows != 1:
+            print("Warning: have", len(dataRowsFiltered), "original matches for TE data", mousekey)
+            raise ValueError("Unexpected")
+
+        #dataIndex = dataRowsFiltered.index[0]
+        #skill = expertMap[isExpert[dataIndex]]
+
+        skill = expertMap[dataRowsFiltered['isExpert'].values[0]]
+
+        # Set multiplex key
+        key = (trial, method, skill)
+        if key not in meanTE.keys():
+            meanTE[key] = []
+        if key not in meanNConnConf.keys():
+            meanNConnConf[key] = []
+
+        # Compute mean TE and connection frequency
+        te, lag, p = dataDB.dataTEFC[idx]
+
+        teOffDiag = graph_lib.offdiag_1D(te)
+        pOffDiag = graph_lib.offdiag_1D(p)
+        isConn1D = graph_lib.is_conn(pOffDiag, 0.01)
+
+        nDataPoint = np.prod(teOffDiag.shape)
+        nConnConf = np.sum(isConn1D)
+
+        # Store results
+        meanNConnConf[key] += [nConnConf / nDataPoint]
+        meanTE[key] += [np.mean(teOffDiag[isConn1D])]
+
+    methods = set(dataDB.metaDataFrames['TE']["method"])
+    trials = set(dataDB.metaDataFrames['TE']["trial"])
+    skills = expertMap.values()
+
+    for method in methods:
+        fig, ax = plt.subplots(ncols=2, figsize=(15, 8))
+        fig.suptitle(method)
+
+        for trial in trials:
+            for skill in skills:
+                key = (trial, method, skill)
+                label = '_'.join((trial, skill))
+
+                ax[0].hist(meanNConnConf[key], bins='auto', alpha=0.3, label=label)
+                ax[1].hist(meanTE[key], bins='auto', alpha=0.3, label=label)
+        ax[0].set_xlabel("Connection Frequency")
+        ax[1].set_xlabel("TE")
+        ax[0].set_xscale('log')
+        ax[1].set_xscale('log')
+        ax[0].legend()
+        ax[1].legend()
+
+    if outname is not None:
+        plt.savefig(outname)
+    if show:
+        plt.show()
     
 
 '''

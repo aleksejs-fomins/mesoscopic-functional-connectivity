@@ -1,8 +1,22 @@
 import sys
 import numpy as np
 from time import gmtime, strftime
+from datetime import datetime
 import bisect
 import psutil
+
+
+# Convert a list of string integers to a date. The integers correspond to ["YYYY", "MM", "DD"] - Others have not been tested
+def strlst2date(strlst):
+    return datetime(*np.array(strlst, dtype=int))
+
+
+# Calculate difference in days between two dates in a pandas column
+# def date_diff(l):
+#     return np.array([(v - l.iloc[0]).days for v in l])
+def date_diff(lst, v0):
+    return np.array([(v - v0).days for v in lst])
+
 
 # Get current time as string
 def time_now_as_str():
@@ -45,3 +59,23 @@ def perm_map_arr(a, b):
 # Same as perm_map_arr, but for string characters
 def perm_map_str(a, b):
     return perm_map_arr(np.array(list(a)), np.array(list(b)))
+
+
+# Assign each string to one key out of provided
+# If no keys found, assign special key
+# If more than 1 key found, raise error
+def bin_data_by_keys(strLst, keys):
+    keysArr = np.array(keys, dtype=object)
+    rez = []
+    for s in strLst:
+        matchKeys = np.array([k in s for k in keys], dtype=bool)
+        nMatch = np.sum(matchKeys)
+        if nMatch == 0:
+            rez += ['other']
+        elif nMatch == 1:
+            rez += [keysArr[matchKeys][0]]
+        else:
+            raise ValueError("String", s, "matched multiple keys", keysArr[matchKeys])
+
+    assert len(rez) == len(strLst), "Resulting array length does not match original"
+    return rez

@@ -111,7 +111,10 @@ def fc_accuracy_plots(xparam, fcData, connTrue, method, pTHR, logx=True, percent
     # Connectivity
     ###############################
     ax[0][1].set_title("True connections")
-    img01 = ax[0][1].imshow(connTrue, vmin=0, vmax=1)
+    if connTrue.ndim == 3:
+        img01 = ax[0][1].imshow(connTrue[..., -1], vmin=0, vmax=1)
+    else:
+        img01 = ax[0][1].imshow(connTrue, vmin=0, vmax=1)
     imshowAddColorBar(fig, ax[0][1], img01)
 
     ax[1][1].set_title("Frequencies of connections")

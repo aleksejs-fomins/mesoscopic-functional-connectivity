@@ -71,6 +71,8 @@ def read_fc_h5(h5_fname, methods):
                 rezDict['xparam'] = np.copy(h5f['metadata']['xparam'])
             if 'connTrue' in h5f['metadata'].keys():
                 rezDict['connTrue'] = np.copy(h5f['metadata']['connTrue'])
+                if rezDict['connTrue'].ndim == 3:
+                    rezDict['connTrue'] = rezDict['connTrue'].transpose((1,2,0))  # [nData, nSrc, nTrg] -> [nSrc, nTrg, nData]
 
         for method in methods:
             if method in h5f.keys():
