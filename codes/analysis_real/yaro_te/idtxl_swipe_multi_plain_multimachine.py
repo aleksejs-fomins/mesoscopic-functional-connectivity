@@ -18,7 +18,7 @@ print("Appended root directory", rootpath)
 # User libraries
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
 from codes.lib.signal_lib import resample
-from codes.lib.fc.idtxl_wrapper import idtxlParallelCPUMulti
+from codes.lib.fc.fc_generic import fc_parallel_multiparam
 
 
 ##############################
@@ -40,29 +40,29 @@ params = {
 #     "samples_window" : "ALL",
     "trial_types" : ["iGO", "iNOGO"],
 #     "resample"    : {'method' : 'averaging', 'kind' : 'kernel'}  # None if raw data is prefered
-    "resample" : None,
+    "resample" : None
 }
 
-#methods = ["BivariateMI", "MultivariateMI"]
-methods =  ["BivariateTE", "MultivariateTE"]
+methods = ["BivariateMI", "MultivariateMI"]
+#methods =  ["BivariateTE", "MultivariateTE"]
 
-idtxl_settings = {
+idtxlSettings = {
     'dim_order'       : 'rsp',
-#    'cmi_estimator'   : 'JidtGaussianCMI',
-    'cmi_estimator'   : 'JidtKraskovCMI',
-    'min_lag_sources' : 1,
-    'max_lag_sources' : 3
+    'cmi_estimator'   : 'JidtGaussianCMI',
+#    'cmi_estimator'   : 'JidtKraskovCMI',
+    'min_lag_sources' : 0,
+    'max_lag_sources' : 0
 }
 
 
 ##############################
 #  Paths
 ##############################
-in_path = "/home/cluster/alfomi/work/mesoscopic-functional-connectivity/codes/analysis_real/yaro_te/"
-out_path = "/scratch/alfomi/idtxl_results_kraskov/"
-json_fname = in_path + "foldersMachine" + str(sys.argv[2]) + ".json"
+inPath = "/home/cluster/alfomi/work/mesoscopic-functional-connectivity/codes/analysis_real/yaro_te/"
+outPath = "/scratch/alfomi/idtxl_results_kraskov/"
+jsonFileName = inPath + "foldersMachine" + str(sys.argv[2]) + ".json"
 
-with open(json_fname, 'r') as f:
+with open(jsonFileName, 'r') as f:
     datapaths = json.load(f)['dataFolders']
 
 ##############################
@@ -130,20 +130,21 @@ for iFile, folderPathName in enumerate(datapaths):
         if dataEff.shape[0] < 50:
             print("Number of trials", dataEff.shape[0], "below threshold, skipping analysis")
         else:
-            teWindow = idtxl_settings["max_lag_sources"] + 1
+            teWindow = idtxlSettings["max_lag_sources"] + 1
 
             data_range = list(range(nTimes - teWindow + 1))
             data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
-            rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, methods, NCore=NCore)  # {method : [nRange, 3, nChannel, nChannel] }
+            #rez = idtxlParallelCPUMulti(data_lst, idtxlSettings, methods, NCore=NCore)  # {method : [nRange, 3, nChannel, nChannel] }
+            rez = fc_parallel_multiparam(data_lst, 'idtxl', methods, idtxlSettings, nCore=NCore)
 
             for methodName, methodRez in rez.items():
                 te_data = np.full((3, nChannels, nChannels, nTimes), np.nan)
-                te_data[..., idtxl_settings["max_lag_sources"]:] = methodRez.transpose((1,2,3,0))
+                te_data[..., idtxlSettings["max_lag_sources"]:] = methodRez.transpose((1,2,3,0))
 
                 #######################
                 # Save results to file
                 #######################
-                savename = os.path.join(out_path, folderName + fileNameSuffix + '_' + methodName + '_swipe' + '.h5')
+                savename = os.path.join(outPath, folderName + fileNameSuffix + '_' + methodName + '_swipe' + '.h5')
                 print(savename)
 
                 h5f = h5py.File(savename, "w")

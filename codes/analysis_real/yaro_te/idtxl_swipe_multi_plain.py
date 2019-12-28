@@ -2,24 +2,11 @@
 #  Includes
 ##############################
 
-'''
-
-
-1!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-
-DANGER: DOES NOT YET COMPARE nTrial < 50
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-'''
-
 
 # Standard libraries
 import os,sys
 import h5py
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Append base directory
 rootname = "mesoscopic-functional-connectivity"
@@ -33,13 +20,14 @@ from codes.lib.signal_lib import resample
 from codes.lib.data_io.os_lib import getfiles_walk
 from codes.lib.data_io.qt_wrapper import gui_fpath
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
-from codes.lib.fc.idtxl_wrapper import idtxlParallelCPUMulti, parse_results
+from codes.lib.fc.fc_generic import fc_parallel_multiparam
 
 
 
 ##############################
 #  Constants
 ##############################
+NCore = int(sys.argv[1])
 
 params = {
     "exp_timestep" : 0.05, # 50ms, the standard measurement interval
@@ -54,28 +42,27 @@ params = {
 #     "samples_window" : "ALL",
     "trial_types" : ["iGO", "iNOGO"],
 #     "resample"    : {'method' : 'averaging', 'kind' : 'kernel'}  # None if raw data is prefered
-    "resample" : None,
+    "resample" : None
 }
 
-idtxl_settings = {
+methods = ["BivariateMI", "MultivariateMI"]
+#methods = ["BivariateTE", "MultivariateTE"]
+
+idtxlSettings = {
     'dim_order'       : 'rsp',
-#    'methods'         : ["BivariateMI", "MultivariateMI"],
-    'methods'          : ["BivariateTE", "MultivariateTE"],
     'cmi_estimator'   : 'JidtGaussianCMI',
-    'min_lag_sources' : 1,
-    'max_lag_sources' : 3
+    'min_lag_sources' : 0,
+    'max_lag_sources' : 0
 }
 
 
 ##############################
 #  Paths
 ##############################
-root_path = gui_fpath("Path to root folder containing neuronal data", "./")
-pathswalk = getfiles_walk(root_path, ['behaviorvar.mat'])
+rootPath = gui_fpath("Path to root folder containing neuronal data", "./")
+pathswalk = getfiles_walk(rootPath, ['behaviorvar.mat'])
 datapaths = {os.path.basename(path) : path for path, file in pathswalk}
-pd.DataFrame(datapaths, index=['dirname']).T
-
-out_path  = gui_fpath("Path where to save results", "./")
+outPath = gui_fpath("Path where to save results", "./")
 
 
 ##############################
@@ -83,81 +70,76 @@ out_path  = gui_fpath("Path where to save results", "./")
 ##############################
 
 for iFile, (folderName, folderPathName) in enumerate(datapaths.items()):
-    
-    if iFile > 0:
+    #############################
+    # Reading and downsampling
+    #############################
 
-        #############################
-        # Reading and downsampling
-        #############################
+    # Read LVM file from command line
+    data, behaviour, performance = read_neuro_perf(folderPathName)
 
-        # Read LVM file from command line
-        data, behaviour, performance = read_neuro_perf(folderPathName)
+    # Get parameters
+    nTrials, nTimes, nChannels = data.shape
+    print("Loaded neuronal data with (nTrials, nTimes, nChannels)=", data.shape)
 
-        # Get parameters
+    #assert nTimes == 201, "The number of timesteps must be 201 for all data, got "+str(nTimes)
+
+
+    # Timeline (x-axis)
+    tlst = params["exp_timestep"] * np.linspace(0, nTimes, nTimes)
+
+    # Downsample data
+    if params["resample"] is not None:
+        print("Downsampling from", params["exp_timestep"], "ms to", params["bin_timestep"], "ms")
+        params["timestep"] = params["bin_timestep"]
+        nTimesDownsampled = int(nTimes * params["exp_timestep"] / params["timestep"])
+        tlst_down = params["timestep"] * np.linspace(0, nTimesDownsampled, nTimesDownsampled)
+        data_down = np.array([[resample(tlst, data[i, :, j], tlst_down, params["resample"])
+                            for i in range(nTrials)]
+                            for j in range(nChannels)])
+
+        # Replace old data with subsampled one
+        tlst, data = tlst_down, data_down.transpose((1, 2, 0))
         nTrials, nTimes, nChannels = data.shape
-        print("Loaded neuronal data with (nTrials, nTimes, nChannels)=", data.shape)
+        print("After downsampling data shape is (nTrials, nTimes, nChannels)=", data.shape)
 
-        #assert nTimes == 201, "The number of timesteps must be 201 for all data, got "+str(nTimes)
-        
+    else:
+        print("Skip resampling")
+        params["timestep"] = params["exp_timestep"]
 
-        # Timeline (x-axis)
-        tlst = params["exp_timestep"] * np.linspace(0, nTimes, nTimes)
 
-        # Downsample data
-        if params["resample"] is not None:
-            print("Downsampling from", params["exp_timestep"], "ms to", params["bin_timestep"], "ms")
-            params["timestep"] = params["bin_timestep"]
-            nTimesDownsampled = int(nTimes * params["exp_timestep"] / params["timestep"])
-            tlst_down = params["timestep"] * np.linspace(0, nTimesDownsampled, nTimesDownsampled)
-            data_down = np.array([[resample(tlst, data[i, :, j], tlst_down, params["resample"])
-                                for i in range(nTrials)]
-                                for j in range(nChannels)])
-            
-            # Replace old data with subsampled one
-            tlst, data = tlst_down, data_down.transpose(1, 2, 0)
-            nTrials, nTimes, nChannels = data.shape
-            print("After downsampling data shape is (nTrials, nTimes, nChannels)=", data.shape)
-            
+    for trialType in params['trial_types']:
+
+        if trialType is None:
+            dataEff = data
+            fileNameSuffix = ""
         else:
-            print("Skip resampling")
-            params["timestep"] = params["exp_timestep"]
+            dataEff = data[behaviour[trialType] - 1]
+            fileNameSuffix = "_" + trialType
+            print("For trialType =", trialType, "the shape is (nTrials, nTimes, nChannels)=", dataEff.shape)
 
-            
-        for trialType in params['trial_types']:
-            
-            if trialType is None:
-                dataEff = data
-                fileNameSuffix = ""
-            else:
-                dataEff = data[behaviour[trialType] - 1]
-                fileNameSuffix = "_" + trialType
-                print("For trialType =", trialType, "the shape is (nTrials, nTimes, nChannels)=", dataEff.shape)
+        #############################
+        # Analysis
+        #############################
 
-            #############################
-            # Analysis
-            #############################
-
-            teWindow = idtxl_settings["max_lag_sources"] + 1
+        if dataEff.shape[0] < 50:
+            print("Number of trials", dataEff.shape[0], "below threshold, skipping analysis")
+        else:
+            teWindow = idtxlSettings["max_lag_sources"] + 1
             #teWindow = 2
 
             data_range = list(range(nTimes - teWindow + 1))
             data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
-            rez = idtxlParallelCPUMulti(data_lst, idtxl_settings, folderName)
+            rez = fc_parallel_multiparam(data_lst, 'idtxl', methods, idtxlSettings, nCore=NCore)
 
-            print(data_range)
 
-            for iMethod, method in enumerate(idtxl_settings['methods']):
+            for methodName, methodRez in rez.items():
                 te_data = np.full((3, nChannels, nChannels, nTimes), np.nan)
-                
-                for iRange in data_range:
-                    te_data[..., iRange + idtxl_settings["max_lag_sources"]] = np.array(
-                        parse_results(rez[iMethod][iRange], nChannels, method=method, storage='matrix')
-                    )
+                te_data[..., idtxlSettings["max_lag_sources"]:] = methodRez.transpose((1,2,3,0))
 
                 #######################
                 # Save results to file
                 #######################
-                savename = os.path.join(out_path, folderName + fileNameSuffix + '_' + method + '_swipe' + '.h5')
+                savename = os.path.join(outPath, folderName + fileNameSuffix + '_' + methodName + '_swipe' + '.h5')
                 print(savename)
 
                 h5f = h5py.File(savename, "w")

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import itertools
 
 from os.path import basename, dirname, join, abspath
 
@@ -315,5 +316,18 @@ class DataFCDatabase :
         self.metaDataFrames['neuro']['deltaDaysCentered'] = deltaDaysCentered
 
 
-    def get_neuro_rows(self, coldict):
-        return filter_rows_colvals(self.metaDataFrames['neuro'], coldict)
+    def get_rows(self, frameName, coldict):
+        return filter_rows_colvals(self.metaDataFrames[frameName], coldict)
+
+
+    # Provide rows for all sessions of the same mouse, iterating over combinations of other anaylsis parameters
+    def mouse_iterator(self):
+        sweepCols = ["mousename",  "analysis", "trial", "range", "method"]
+        sweepValues = [self.summaryTE[colname].values() for colname in sweepCols]
+        sweepProduct = list(itertools.product(*sweepValues))
+
+        for sweepComb in sweepProduct:
+            sweepCombDict = dict(zip(sweepCols, sweepComb))
+            rows = self.get_rows('TE', sweepCombDict)
+            if rows.shape[0] > 0:
+                yield sweepCombDict, rows
