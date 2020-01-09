@@ -2,7 +2,8 @@ import numpy as np
 import scipy.stats
 
 from codes.lib.aux_functions import perm_map_str
-from codes.lib.stat_lib import bonferroni_correction
+from codes.lib.stat.stat_lib import bonferroni_correction
+
 
 def corr_significance(c, nData):
     t = c * np.sqrt((nData - 2) / (1 - c**2))

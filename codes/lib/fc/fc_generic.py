@@ -1,10 +1,10 @@
 import numpy as np
-import multiprocessing, pathos
 
 from codes.lib.aux_functions import mem_now_as_str
 from codes.lib.decorators_lib import time_mem_1starg
 import codes.lib.fc.idtxl_wrapper as idtxl_wrapper
 from codes.lib.fc.corr_lib import crossCorr
+from codes.lib.parallel_lib import GenericMapper
 
 
 '''
@@ -19,30 +19,7 @@ Keywords
 Note that some methods do not have a single target implementation, so can't parallelize over targets, only over data and methods.
 '''
 
-# A class that switches between serial and parallel mappers
-# Also deletes parallel mapper when class is deleted
-class genericMapper():
-    def __init__(self, serial, nCore=None):
-        self.serial = serial
-        self.pid = multiprocessing.current_process().pid
 
-        if serial:
-            self.nCore = 1
-        else:
-            self.nCore = nCore if nCore is not None else pathos.multiprocessing.cpu_count() - 1
-            self.pool = pathos.multiprocessing.ProcessingPool(self.nCore)
-            # self.pool = multiprocessing.Pool(self.nCore)
-
-    # def __del__(self):
-    #     if not self.serial:
-    #         self.pool.close()
-    #         self.pool.join()
-
-    def map(self, f, x):
-        print("----Root process", self.pid, "started task on", self.nCore, "cores----")
-        rez = list(map(f, x)) if self.serial else self.pool.map(f, x)
-        print("----Root process", self.pid, "finished task")
-        return rez
 
 
 def preprocess_data(data, library, settings):
@@ -88,7 +65,7 @@ def fc_parallel_target(data, library, method, settings, serial=False, nCore=None
     dataPreprocessed = preprocess_data(data, library, settings)
 
     # Initialize mapper depending on whether we do parallel or serial computation
-    mapper = genericMapper(serial, nCore=nCore)
+    mapper = GenericMapper(serial, nCore=nCore)
 
     # Construct task generator
     def task_gen():
@@ -148,7 +125,7 @@ def fc_parallel_multiparam_target(dataLst, library, methods, settings, serial=Fa
     ###############################
     # Initialize mapper
     ###############################
-    mapper = genericMapper(serial, nCore=nCore)
+    mapper = GenericMapper(serial, nCore=nCore)
 
     ###############################
     # Compute estimators in parallel
@@ -203,7 +180,7 @@ def fc_parallel_multiparam_network(dataLst, library, methods, settings, serial=F
     ###############################
     # Initialize mapper
     ###############################
-    mapper = genericMapper(serial, nCore=nCore)
+    mapper = GenericMapper(serial, nCore=nCore)
 
     ###############################
     # Compute estimators in parallel
