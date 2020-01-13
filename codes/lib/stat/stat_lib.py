@@ -25,16 +25,24 @@ def log_likelihood(pLst, axis=0):
 # Construct CDF from discrete distribution
 # Has same length as PDF, first probability non-zero, last probability is 1
 def discrete_distr_to_cdf(distr):
-    cdfP = np.copy(distr.values())
+    keysSorted = sorted(distr.keys())
+    cdfP = np.array([distr[k] for k in keysSorted])
     for i in range(1, cdfP.size):
         cdfP[i] += cdfP[i - 1]
-    return dict(zip(distr.keys(), cdfP))
+    return dict(zip(keysSorted, cdfP))
+
+
+# Construct a PDF from a discrete sample. No binning - items must match exactly
+def discrete_empirical_pdf_from_sample(sample):
+    keys, vals = np.unique(sample, return_counts=True)
+    vals = vals.astype(float) / np.sum(vals)
+    return dict(zip(keys, vals))
 
 
 # Draw N samples from a discrete probability distribution
-def discrete_sample(cdf, nSample):
-    cdfX = np.array(cdf.keys())
-    cdfP = np.array(cdf.values())
+def discrete_resample(cdf, nSample):
+    cdfX = np.array(list(cdf.keys()))
+    cdfP = np.array(list(cdf.values()))
 
     urand = np.random.uniform(0, 1, nSample)
     bisectIdxs = [bisect_left(cdfP, p) for p in urand]
