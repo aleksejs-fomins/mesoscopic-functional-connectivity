@@ -47,3 +47,10 @@ def discrete_resample(cdf, nSample):
     urand = np.random.uniform(0, 1, nSample)
     bisectIdxs = [bisect_left(cdfP, p) for p in urand]
     return cdfX[bisectIdxs]
+
+
+# Resample a function of 1D data array using bootstrap method
+def bootstrap_resample_function(f, data1D, nSample):
+    nData = len(data1D)
+    fRes = [f(data1D[np.random.randint(0, nData, nData)]) for i in range(nSample)]
+    return np.mean(fRes), np.std(fRes)

@@ -3,7 +3,7 @@ Combinatorics library
 '''
 
 from math import lgamma
-from scipy.misc import comb
+from scipy.special import comb
 
 def comb_fak(N, k):
     return comb(N, k, exact=True)

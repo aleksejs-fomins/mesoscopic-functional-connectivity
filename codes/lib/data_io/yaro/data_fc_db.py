@@ -224,16 +224,30 @@ class DataFCDatabase :
             self.dataNeuronal = []
             self.dataTrials = []
             self.dataPerformance = []
+            badPerfIdxs = []
 
             progBar = IntProgress(min=0, max=nNeuroFiles, description='Read Neuro Data:')
             display(progBar)  # display the bar
-            for datapath in self.metaDataFrames['neuro']['path']:
+            for idx, datapath in enumerate(self.metaDataFrames['neuro']['path']):
                 data, behaviour, performance = read_neuro_perf(datapath, verbose=False)
-                self.dataNeuronal += [data]
-                self.dataTrials += [behaviour]
-                self.dataPerformance += [performance]
+                if (performance >= 0) and (performance <= 1):
+                    self.dataNeuronal += [data]
+                    self.dataTrials += [behaviour]
+                    self.dataPerformance += [performance]
+                else:
+                    badPerfIdxs += [idx]
                 progBar.value += 1
             self.dataPerformance = np.array(self.dataPerformance)
+
+            # Drop all mice for which performance exceeds 1
+            nBadPerfIdxs = len(badPerfIdxs)
+            if nBadPerfIdxs > 0:
+                print("Bad performance in", nBadPerfIdxs, "sessions, fixing")
+                nRowsBefore = self.metaDataFrames['neuro'].shape[0]
+                self.metaDataFrames['neuro'] = self.metaDataFrames['neuro'].drop(badPerfIdxs).reset_index(drop=True)
+                nRowsAfter = self.metaDataFrames['neuro'].shape[0]
+                if nRowsBefore - nRowsAfter != nBadPerfIdxs:
+                    raise ValueError("Bad stuff", nRowsBefore, nRowsAfter, nBadPerfIdxs)
 
             # Fix mousekeys to remove trailing underscore
             for idx, row in self.metaDataFrames['neuro'].iterrows():

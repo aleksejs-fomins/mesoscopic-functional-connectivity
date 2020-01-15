@@ -24,6 +24,9 @@ def read_neuro_perf(folderpath, verbose=True):
     behavior = {k : v for k, v in behavior.items() if k[0] != '_'}      # Get rid of useless fields in behaviour
     performance = mouse_performance_single_session(nTrialsData, behavior)
 
+    if (nTrialsData < len(behavior['iGO']) + len(behavior['iNOGO'])):
+        print("Warning: For", os.path.basename(folderpath), "nTrials inconsistent with behaviour", nTrialsData, len(behavior['iGO']), len(behavior['iNOGO']))
+
     if not os.path.exists(fpath_performance):
         print("--Warning: No performance metrics found for", os.path.dirname(folderpath), "; Using calculated")
     else:

@@ -7,7 +7,8 @@ from codes.lib.aux_functions import date_diff
 def mouse_performance_single_session(nTrial, behaviour):
     nTrialGO = len(behaviour['iGO'])
     nTrialNOGO = len(behaviour['iNOGO'])
-    return (nTrialGO + nTrialNOGO) / nTrial
+    perf = (nTrialGO + nTrialNOGO) / nTrial
+    return perf
 
 
 # Mark days as naive or expert based on performance threshold
