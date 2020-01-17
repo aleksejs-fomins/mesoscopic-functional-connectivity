@@ -281,3 +281,27 @@ def readTE_H5(fname, summary):
     times = summary["timestep"] * (np.arange(GAP_L, N_TIMES - GAP_R) + GAP_R / 2)
 
     return times, data[..., GAP_L:N_TIMES - GAP_R]
+
+
+# Extract info from folder name containing TE files
+def parse_TE_folder(datapath):
+    dataname = os.path.basename(datapath)
+    downsampling, delayText, delay, windowText, window = dataname.split('_')
+    assert downsampling in ["raw", "subsample", "subsampled"], "Can't infer downsampling from " + dataname
+    assert delayText == "delay", "Unexpected data folder name " + dataname
+    assert windowText == "window", "Unexpected data folder name " + dataname
+
+    if downsampling == "raw":
+        timestep = 0.05  # seconds
+    else:
+        timestep = 10 / 49  # seconds  (I resampled to 50, not to 51 points [whoops], so DT is not 0.2 but a bit more
+
+    summaryTE = {
+        "dataname": dataname,
+        "downsampling": downsampling,
+        "max_lag": int(delay),
+        "window": int(window),
+        "timestep": timestep
+    }
+
+    return summaryTE

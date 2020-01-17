@@ -8,7 +8,7 @@ from codes.lib.aux_functions import bin_data_by_keys, strlst2date
 from codes.lib.metrics.mouse_performance import mouse_performance_allsessions
 from codes.lib.pandas_lib import filter_rows_colval, filter_rows_colvals
 from codes.lib.data_io.os_lib import getfiles_walk
-from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf, read_paw, read_lick, read_whisk, readTE_H5
+from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf, read_paw, read_lick, read_whisk, readTE_H5, parse_TE_folder
 from codes.lib.data_io.yaro.yaro_behaviour_preprocess import resample_lick, resample_paw, resample_whisk
 
 from IPython.display import display
@@ -89,12 +89,12 @@ class DataFCDatabase :
     # User selects multiple sets of H5 files, corresponding to different datasets
     # Parse filenames and get statistics of files in each dataset
     def _find_parse_te_files(self, datapath):
-        dataname = basename(datapath)
+        self.summaryTE = parse_TE_folder(datapath)
 
         # Get basenames and paths
         fileswalk = getfiles_walk(datapath, ".h5")
         fbasenames = fileswalk[:, 1]
-        print("Total user files in dataset", dataname, "is", len(fbasenames))
+        print("Total user files in dataset", self.summaryTE["dataname"], "is", len(fbasenames))
 
         # Extract other info from basenames
         methodKeys = ["BivariateMI", "MultivariateMI", "BivariateTE", "MultivariateTE"]
@@ -111,28 +111,14 @@ class DataFCDatabase :
 
         self.metaDataFrames["TE"] = pd.DataFrame.from_dict(metaDict)
 
-        downsampling, delayText, delay, windowText, window = dataname.split('_')
-        assert downsampling in ["raw", "subsample", "subsampled"], "Can't infer downsampling from " + dataname
-        assert delayText == "delay", "Unexpected data folder name " + dataname
-        assert windowText == "window", "Unexpected data folder name " + dataname
-
-        if "raw" in dataname:
-            timestep = 0.05  # seconds
-        else:
-            timestep = 10 / 49  # seconds  (I resampled to 50, not to 51 points [whoops], so DT is not 0.2 but a bit more
-
-        self.summaryTE = {
-            "dataname": dataname,
-            "downsampling": downsampling,
-            "timestep": timestep,
-            "max_lag": int(delay),
-            "window": int(window),
+        summaryTEExtra = {
             "mousename": dict(zip(*np.unique(metaDict["mousename"], return_counts=True))),
             "analysis": dict(zip(*np.unique(metaDict["analysis"], return_counts=True))),
             "trial": dict(zip(*np.unique(metaDict["trial"], return_counts=True))),
             "range": dict(zip(*np.unique(metaDict["range"], return_counts=True))),
             "method": dict(zip(*np.unique(metaDict["method"], return_counts=True)))
         }
+        self.summaryTE.update(summaryTEExtra)
 
 
     # Channel labels are brain regions associated to each channel index
