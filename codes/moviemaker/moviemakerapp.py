@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/alyosha/work/git/mesoscopic-functional-connectivity/codes/moviemaker/moviemakerapp.ui'
+# Form implementation generated from reading ui file '/media/aleksejs/DataHDD/work/codes/comp-neuro/analysis-mesoscopic/mesoscopic-functional-connectivity/codes/moviemaker/moviemakerapp.ui'
 #
-# Created by: PyQt5 UI code generator 5.13.0
+# Created by: PyQt5 UI code generator 5.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
-
 from PyQt5 import QtCore, QtGui, QtWidgets
-
 
 class Ui_MovieMakerApp(object):
     def setupUi(self, MovieMakerApp):
@@ -88,7 +86,7 @@ class Ui_MovieMakerApp(object):
         self.horizontalLayout.addLayout(self.verticalLayout)
         MovieMakerApp.setCentralWidget(self.centralWidget)
         self.menuBar = QtWidgets.QMenuBar(MovieMakerApp)
-        self.menuBar.setGeometry(QtCore.QRect(0, 0, 1400, 22))
+        self.menuBar.setGeometry(QtCore.QRect(0, 0, 1400, 29))
         self.menuBar.setObjectName("menuBar")
         self.menuFile = QtWidgets.QMenu(self.menuBar)
         self.menuFile.setObjectName("menuFile")
@@ -137,7 +135,6 @@ class Ui_MovieMakerApp(object):
         self.menuFile.addAction(self.actionSave_node_layout)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionExit)
-        self.menuEdit.addAction(self.actionUpdate_Plot)
         self.menuEdit.addAction(self.actionAutogen_Circles)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionLabel_Nodes)
@@ -176,3 +173,4 @@ class Ui_MovieMakerApp(object):
         self.actionActivity_Based_Nodes.setText(_translate("MovieMakerApp", "Activity-Based Nodes"))
         self.actionUndirected_Edges.setText(_translate("MovieMakerApp", "Undirected Edges"))
         self.actionFC_Based_Edges.setText(_translate("MovieMakerApp", "FC-Based Edges"))
+

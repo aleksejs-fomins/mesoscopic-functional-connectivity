@@ -49,6 +49,14 @@ def qtable_setcolval(qtable, iCol, values, raw=False):
         qtable.setItem(iRow, iCol, valWidget)
 
 
+# Flags determines which flags to be switched
+# Val determines whether to switch up or down
+def qtable_setcolflag(qtable, iCol, flags, val):
+    for iRow in range(qtable.rowCount()):
+        newFlags = (qtable.item(iRow, iCol).flags() & ~flags) | (flags & val)
+        qtable.item(iRow, iCol).setFlags(newFlags)
+
+
 def qtable_setrowcolor(qtable, iRow, color):
     for iCol in range(qtable.columnCount()):
         qtable.item(iRow, iCol).setBackground(color)

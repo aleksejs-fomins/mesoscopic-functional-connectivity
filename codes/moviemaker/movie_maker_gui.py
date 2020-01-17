@@ -3,6 +3,7 @@
 ###############################
 import os, sys, locale
 import json
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch
@@ -35,10 +36,14 @@ os.system(qtCompilePrefStr)
 from codes.moviemaker.draggable import DraggableCircle
 from codes.moviemaker.moviemakerapp import Ui_MovieMakerApp
 import codes.moviemaker.qthelper as qthelper
+from codes.moviemaker.opencv_lib import cvWriter
+from codes.moviemaker.matplotlib_helper import fig2numpy
 
 from codes.lib.data_io.os_lib import getfiles_walk
 from codes.lib.data_io.matlab_lib import loadmat
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf, readTE_H5, parse_TE_folder
+
+import codes.lib.metrics.graph_lib as graph_lib
 
 
 '''
@@ -58,18 +63,24 @@ GUI for making functional connectivity videos
 ===================
 = TODO
 ===================
-[ ] Load FC datafile, extract matrix
-[+] Load metadatafile, extract region labels, data traces
-[ ] Store recent data in JSON
+
+[+] Disable Table editing
+[+] Optimize refresh
+[+] Disable table and combo actions during edit
+[+] Enable/Disable GUI components based on global state
+[ ] Solve Keyboard KeyEvent not activaing
+[ ] Move most dictionaries from Key to integer value. Only keep dict for interacting with table
+
+
 
 [ ] Circles :: Represent Regions
-    [ ] Extract from datafile
+    [+] Extract from datafile
     [ ] Enable variable radius
-    [ ] Label on plot
+    [+] Label on plot
     [ ] Optional brightness based on data trace
-    [ ] Enable drag
-    [ ] Enable save/load position based on index
-    [ ] Disable individual regions
+    [+] Enable drag
+    [+] Enable save/load position based on index
+    [+] Disable individual regions
 
 [ ] Edges :: Represent Connections
     [ ] Visible based on P < 0.01
@@ -83,6 +94,8 @@ GUI for making functional connectivity videos
   [ ] Slider to select min-max timestep
   [ ] Preview in app
   [ ] Save to movie file
+  [ ] Timestamp on movie
+  [ ] Synchronize data and FC time. Make reader return both shifts along with dataset
 '''
 
 #######################################################
@@ -115,6 +128,7 @@ class MovieMakerApp():
             "HAVE_NODE_COORDS"  : False,
             "HAVE_EDGES"        : False
         }
+        self.react_global_state_change()
 
         # Init Plot Layout
         self.init_plot_layout()
@@ -127,8 +141,6 @@ class MovieMakerApp():
         self.gui.actionSave_node_layout.triggered.connect(self.save_node_layout)
         self.gui.actionLoad_Recent.triggered.connect(self.load_recent)
         self.gui.actionExport_movie.triggered.connect(self.export_movie)
-
-        self.gui.actionUpdate_Plot.triggered.connect(lambda : self.update_plot(channelCoordsDict=None))
         self.gui.actionAutogen_Circles.triggered.connect(self.autogen_node_layout)
 
         self.gui.movieFrameSlider.valueChanged.connect(self.movie_slider_react)
@@ -149,6 +161,28 @@ class MovieMakerApp():
     def set_global_state(self, key, val):
         self.globalStateDict[key] = val
         print("Global State of", key, "updated to", val)
+        self.react_global_state_change()
+
+
+    # Enable/Disable actions based on global state
+    def react_global_state_change(self):
+        self.gui.actionLoad_FC_File.setEnabled(self.globalStateDict["HAVE_DATA_NEURO"])
+        self.gui.actionLoad_node_layout.setEnabled(self.globalStateDict["HAVE_NODES"])
+        self.gui.actionSave_node_layout.setEnabled(self.globalStateDict["HAVE_NODE_COORDS"])
+        self.gui.actionExport_movie.setEnabled(self.globalStateDict["HAVE_EDGES"])
+        self.gui.actionAutogen_Circles.setEnabled(self.globalStateDict["HAVE_NODES"])
+        self.gui.fcDataComboBox.setEnabled(self.globalStateDict["HAVE_DATA_FC"])
+        self.gui.movieFrameSlider.setEnabled(self.globalStateDict["HAVE_EDGES"])
+
+
+    def react_channel_table_itemchanged(self, item):
+        iRow = item.row()
+        iCol = item.column()
+
+        if (iCol == 0) and (self.globalStateDict["HAVE_NODE_COORDS"]):
+            nodeIdx = int(self.gui.channelTableWidget.item(iRow, 1).text())
+            nodeLabel = self.gui.channelTableWidget.item(iRow, 2).text()
+            self.update_circle_and_edges((nodeIdx, nodeLabel), circleMoved=False)
 
 
     def load_data_folder(self, cached=False):
@@ -177,6 +211,7 @@ class MovieMakerApp():
             self.channelKeys = [(i, str(i)) for i in range(self.nChannel)]
 
         # Fill channel table
+        self.gui.channelTableWidget.disconnect()  # Ensure table does not emit any user-signals before editing it (could happen when we load 2nd time)
         self.gui.channelTableWidget.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         self.gui.channelTableWidget.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         self.gui.channelTableWidget.setRowCount(0)
@@ -184,6 +219,11 @@ class MovieMakerApp():
             striRow = str(iRow) if iRow > 9 else '0' + str(iRow)
             thisCheckBox = qthelper.qtable_make_checkbox(checked=True)
             qthelper.qtable_addrow(self.gui.channelTableWidget, iRow, [thisCheckBox, striRow, label])
+
+        qthelper.qtable_setcolflag(self.gui.channelTableWidget, 0, QtCore.Qt.ItemIsEditable, True)
+        qthelper.qtable_setcolflag(self.gui.channelTableWidget, 1, QtCore.Qt.ItemIsEditable, False)
+        qthelper.qtable_setcolflag(self.gui.channelTableWidget, 2, QtCore.Qt.ItemIsEditable, False)
+        self.gui.channelTableWidget.itemChanged.connect(self.react_channel_table_itemchanged)
 
         # Update global state
         self.set_global_state("HAVE_NODES", True)
@@ -223,6 +263,12 @@ class MovieMakerApp():
             # Load FC data
             self.load_fc_data()
 
+            # Update slider to FC values
+            oldState = self.gui.movieFrameSlider.blockSignals(True)
+            self.gui.movieFrameSlider.setValue(0)
+            self.gui.movieFrameSlider.setMaximum(len(self.timesFC))
+            self.gui.movieFrameSlider.blockSignals(oldState)
+
             # If everything went smooth, save path to settings file
             self.save_settings()
 
@@ -234,7 +280,8 @@ class MovieMakerApp():
     def load_fc_data(self):
         fcDataKey = self.gui.fcDataComboBox.currentText()
         fcDataPath = self.pathFCFilesDict[fcDataKey]
-        self.timesFC, self.dataFC = readTE_H5(fcDataPath, self.summaryFC)
+        self.timesFC, (self.fcMag, self.fcLag, self.fcPval) = readTE_H5(fcDataPath, self.summaryFC)
+        self.fcIsConn = graph_lib.is_conn(self.fcPval, 0.01)
         print("loaded data for", fcDataKey)
 
 
@@ -333,6 +380,27 @@ class MovieMakerApp():
         pathTmp = os.path.dirname(self.pathMovie) if self.pathMovie is not None else "./"
         self.pathNodeLayoutFile = QtWidgets.QFileDialog.getSaveFileName(self.gui.centralWidget, "Save Movie File", pathTmp, "Movie Files (*.avi)")
 
+        print("Started writing movie to", self.pathNodeLayoutFile)
+        self.gui.centralWidget.setEnabled(False)
+
+        from codes.moviemaker.opencv_lib import cvWriter
+        from codes.moviemaker.matplotlib_helper import fig2numpy
+
+        figW = int(600)
+        figH = int(600)
+        dpi = int(300)
+
+        with cvWriter(self.pathNodeLayoutFile, (figW, figH), isColor=True) as movieWriter:
+            self.movieFigure.set_size_inches(figW, figH)
+            self.movieFigure._set_dpi(dpi)
+            for i in range(len(self.timesFC)):
+                print("Writing frame", i)
+                self.gui.movieFrameSlider.setValue(i)
+                movieWriter.write(fig2numpy(self.movieFigure))
+
+        self.gui.centralWidget.setEnabled(True)
+        print("Finished writing movie")
+
 
     # Extract values from channel table by column
     def parse_channel_table(self):
@@ -347,6 +415,9 @@ class MovieMakerApp():
 
     # Updates checked states from file
     def update_channel_table(self, channelEnabledDictNew):
+        # Ensure no signals are passed during this operation
+        oldState = self.gui.channelTableWidget.blockSignals(True)
+
         channelEnabledDict = self.parse_channel_table()
         for k,v in channelEnabledDictNew.items():
             if k in channelEnabledDict.keys():
@@ -355,11 +426,15 @@ class MovieMakerApp():
                 print("Warning: key", k, "is not part of original channel keys")
         qthelper.qtable_setcolchecked(self.gui.channelTableWidget, 0, list(channelEnabledDict.values()))
 
+        self.gui.channelTableWidget.blockSignals(oldState)
+
 
     # Fill FC combo box with names of available datasets
-    # TODO: Disable actions while combo box is getting filled
     def update_fc_combo_box(self):
+        # Ensure no signals are passed during this operation
+        oldState = self.gui.fcDataComboBox.blockSignals(True)
         qthelper.qcombo_fill(self.gui.fcDataComboBox, self.pathFCFilesDict.keys())
+        self.gui.fcDataComboBox.blockSignals(oldState)
 
 
     # Arrange nodes on a circle
@@ -378,10 +453,10 @@ class MovieMakerApp():
 
             self.plot_circles(channelCoordsDict)
             self.set_global_state("HAVE_NODE_COORDS", True)
+            self.plot_edges()
 
 
     def plot_circles(self, channelCoordsDict):
-        dragUpdate = lambda pos: self.update_plot()
         self.movieCircles = []
         self.movieCirclesDraggable = []
         self.movieLabels = []
@@ -389,6 +464,7 @@ class MovieMakerApp():
         channelEnabledDict = self.parse_channel_table()
         for key, pos in channelCoordsDict.items():
             thisVisible = channelEnabledDict[key]
+            dragUpdate = lambda pos, key=key: self.update_circle_and_edges(key, circleMoved=True)
             self.movieCircles += [plt.Circle(pos, self.CIRCLE_RADIUS_DEFAULT, color='blue', visible=thisVisible)]
             self.movieAxis.add_artist(self.movieCircles[-1])
             self.movieCirclesDraggable += [DraggableCircle(self.movieCircles[-1], triggerOnRelease=dragUpdate)]
@@ -401,53 +477,75 @@ class MovieMakerApp():
         self.movieFigureCanvas.draw()
 
 
-    # If coordinates are forced, update coordinates of all circles from local dict, otherwise keep plot coordinates
-    def update_circles(self, channelCoordsDict=None):
-        print("ZOLO", channelCoordsDict is None)
-        channelEnabledDict = self.parse_channel_table()
-        for k,v in channelEnabledDict.items():
-            idx = k[0]
-            circle = self.movieCircles[idx]
-            label = self.movieLabels[idx]
-
-            circle.set_visible(v)
-            label.set_visible(v)
-            if channelCoordsDict is not None:
-                print(channelCoordsDict)
-                circle.center = channelCoordsDict[k]
-            label.set_position(self.label_calc_rel_pos(circle.center))
-        self.movieFigureCanvas.draw()
-
-
     def get_circle_pos_from_plot(self):
         channelEnabledDict = self.parse_channel_table()
         return {key: list(self.movieCircles[key[0]].center) for key in channelEnabledDict.keys()}
 
 
-    def plot_edges(self):
+    def plot_edges(self, iTime=None):
         self.movieEdgesIdxMap = {}
         self.movieEdges = []
         self.movieEdgePatches = []
 
-        def make_fake_arrow(i, j):
+        def make_edge(i, j):
             self.movieEdgesIdxMap[(i, j)] = len(self.movieEdges)
             self.movieEdges += [FancyArrowPatch((0, 0), (1, 1))]
             self.movieEdgePatches += [self.movieAxis.add_patch(self.movieEdges[-1])]
+            self.update_edge(i,j,iTime=iTime)
 
         for i in range(self.nChannel):
             for j in range(i+1, self.nChannel):
-                make_fake_arrow(i, j)
-                make_fake_arrow(j, i)
+                make_edge(i, j)
+                make_edge(j, i)
 
-        self.update_edges()
         self.set_global_state("HAVE_EDGES", True)
+        self.movieFigureCanvas.draw()
 
 
-    def update_edges(self, iTime=None):
-        for (i,j), idxEdge in self.movieEdgesIdxMap.items():
-            vis1 = self.movieCircles[i].get_visible()
-            vis2 = self.movieCircles[j].get_visible()
-            visEdge = vis1 and vis2
+    def movie_slider_react(self):
+        thisFrame = self.gui.movieFrameSlider.value()
+        self.gui.movieFrameLabel.setText(str(np.round(self.timesFC[thisFrame], 2)))
+        self.update_plot()
+
+
+    def update_circle(self, nodeKey, enabled=None, newCoord=None, iTime=None):
+        idx = nodeKey[0]
+        circle = self.movieCircles[idx]
+        label = self.movieLabels[idx]
+
+        if enabled is None:
+            enabled = self.parse_channel_table()[nodeKey]
+
+        if newCoord is not None:
+            print("Node", nodeKey, "auto-moved to", newCoord)
+            circle.center = newCoord
+
+        circle.set_visible(enabled)
+        label.set_visible(enabled)
+        label.set_position(self.label_calc_rel_pos(circle.center))
+
+
+    def update_circle_and_edges(self, nodeKey, enabled=None, circleMoved=True):
+        iTime = self.gui.movieFrameSlider.value() if self.globalStateDict["HAVE_DATA_FC"] else None
+
+        self.update_circle(nodeKey, enabled=enabled, newCoord=None, iTime=iTime)
+
+        # Update all edges connected to this node if they
+        for (i, j), idxEdge in self.movieEdgesIdxMap.items():
+            if (i == nodeKey[0]) or (j == nodeKey[0]):
+                self.update_edge(i, j, circleMoved=circleMoved, iTime=iTime)
+
+        self.movieFigureCanvas.draw()
+
+
+    def update_edge(self, i, j, circleMoved=True, iTime=None):
+        idxEdge = self.movieEdgesIdxMap[(i,j)]
+        vis1 = self.movieCircles[i].get_visible()
+        vis2 = self.movieCircles[j].get_visible()
+        visP = self.fcIsConn[i, j, iTime] if iTime is not None else True
+        visEdge = vis1 and vis2 and visP
+
+        if circleMoved:
             p1 = np.array(self.movieCircles[i].center)
             p2 = np.array(self.movieCircles[j].center)
             p1sh, p2sh = self.edge_calc_rel_pos(p1, p2)
@@ -458,21 +556,26 @@ class MovieMakerApp():
             self.movieEdgePatches[idxEdge].remove()
             self.movieEdges[idxEdge] = FancyArrowPatch(posPrim[0], posPrim[1], connectionstyle="arc3,rad=.2", **kw)
             self.movieEdgePatches[idxEdge] = self.movieAxis.add_patch(self.movieEdges[idxEdge])
-        self.movieFigureCanvas.draw()
 
-
-    def movie_slider_react(self):
-        thisFrame = self.gui.movieFrameSlider.value()
-        self.gui.movieFrameLabel.setText(str(thisFrame))
+        self.movieEdges[idxEdge].set_visible(visEdge)
 
 
     def update_plot(self, channelCoordsDict=None):
-        iTime = self.gui.movieFrameSlider.value()
-        self.update_circles(channelCoordsDict=channelCoordsDict)
+        iTime = self.gui.movieFrameSlider.value() if self.globalStateDict["HAVE_DATA_FC"] else None
+
+        # Update all circles
+        channelEnabledDict = self.parse_channel_table()
+        for k,v in channelEnabledDict.items():
+            newCoord = channelCoordsDict[k] if channelCoordsDict is not None else None
+            self.update_circle(k, enabled=v, newCoord=newCoord, iTime=iTime)
+
         if self.globalStateDict["HAVE_EDGES"]:
-            self.update_edges()
+            for (i, j), idxEdge in self.movieEdgesIdxMap.items():
+                self.update_edge(i, j, iTime=iTime)
         else:
-            self.plot_edges()
+            self.plot_edges(iTime=iTime)
+
+        self.movieFigureCanvas.draw()
 
 
     # Shift label w.r.t center of circle, so they don't overlap

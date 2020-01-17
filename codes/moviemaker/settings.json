@@ -1,6 +1,6 @@
 {
     "pathNeuro": "/mnt/hifo_scratch1/Yaro/data_for_TE/neuronal/mtp/mtp_7/mtp_7_2016_02_25_a",
     "pathFC": "/mnt/hifo_scratch1/Yaro/TE_from_Aleksejs/data_idtxl/swipe/raw_delay_3_window_4",
-    "pathLayout": "/home/alyosha/work/git/mesoscopic-functional-connectivity/codes/moviemaker/tmp_layouts/ccc.json",
+    "pathLayout": null,
     "pathMovie": null
 }
