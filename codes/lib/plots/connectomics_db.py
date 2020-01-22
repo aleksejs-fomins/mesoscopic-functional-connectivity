@@ -1,7 +1,9 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
+from codes.lib.plots.matplotblib_lib import bins_multi
 from codes.lib.plots import connectomics
 from codes.lib.metrics import graph_lib
 from codes.lib.stat.stat_lib import bootstrap_resample_function
@@ -71,6 +73,96 @@ def plot_te_distribution(dataDB, pTHR, rangesSec, outpath, ext='.svg'):
 
 
 def plot_te_distribution_avgbyperformance(dataDB, pTHR, outname=None, show=True):
+    '''
+    TODO:
+       Scatter nConn,TE vs Performance + expertLine
+       2xBin mean(nConn), mean(TE) naive&expert + (* from wilcoxon rank-sum)
+       Scatter nConn, TE vs nTrial
+       Test if nTrial fully explains prev plot
+    '''
+
+    perfLst = defaultdict(list)
+    meanTE = defaultdict(list)
+    meanNConnConf = defaultdict(list)
+
+    for idx, row in dataDB.metaDataFrames['TE'].iterrows():
+        # Extract parameters from dataframe
+        trial = row['trial']
+        method = row['method']
+        mousekey = row['mousekey']
+
+        # Find corresponding data file, extract performance
+        dataRowsFiltered = dataDB.get_rows('neuro', {'mousekey' : mousekey})
+        nRows = dataRowsFiltered.shape[0]
+        if nRows == 0:
+            print("Warning:", mousekey, "does not have an associated data entry, skipping")
+        elif nRows > 1:
+            print("Warning: have", len(dataRowsFiltered), "original matches for TE data", mousekey)
+            raise ValueError("Unexpected")
+        else:
+            # Set multiplex key
+            key = (trial, method)
+
+            idxData = dataRowsFiltered.index[0]
+            perfLst[key] += [dataDB.dataPerformance[idxData]]
+
+            # Compute mean TE and connection frequency
+            te, lag, p = dataDB.dataTEFC[idx]
+
+            teOffDiag = graph_lib.offdiag_1D(te)
+            pOffDiag = graph_lib.offdiag_1D(p)
+            isConn1D = graph_lib.is_conn(pOffDiag, pTHR)
+
+            nDataPoint = np.prod(teOffDiag.shape)
+            nConnConf = np.sum(isConn1D)
+
+            # Store results
+            meanNConnConf[key] += [nConnConf / nDataPoint]
+            meanTE[key] += [np.mean(teOffDiag[isConn1D])]
+
+
+    methods = set(dataDB.metaDataFrames['TE']["method"])
+    trials = set(dataDB.metaDataFrames['TE']["trial"])
+
+    for method in methods:
+        fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
+        fig.suptitle(method)
+
+        multiBinDataNConn = [[], []]
+        multiBinDataTE = [[], []]
+        for trial in trials:
+                key = (trial, method)
+
+                perfThis  = np.array(perfLst[key])
+                nConnThis = np.array(meanNConnConf[key])
+                teThis    = np.array(meanTE[key])
+
+                idxExpert = perfThis >= 0.7
+                multiBinDataNConn[0] += [nConnThis[~idxExpert]]
+                multiBinDataNConn[1] += [nConnThis[idxExpert]]
+                multiBinDataTE[0] += [teThis[~idxExpert]]
+                multiBinDataTE[1] += [teThis[idxExpert]]
+
+                ax[0][0].plot(perfThis, nConnThis, '.', label=trial)
+                ax[1][0].semilogy(perfThis, teThis, '.', label=trial)
+
+        bins_multi(ax[0][1], ["naive", "expert"], list(trials), multiBinDataNConn)
+        bins_multi(ax[1][1], ["naive", "expert"], list(trials), multiBinDataTE)
+
+        ax[0][0].set_xlabel("performance")
+        ax[1][0].set_xlabel("performance")
+        ax[0][0].set_ylabel("Connection Frequency")
+        ax[1][0].set_ylabel("TE")
+        ax[0][0].legend()
+        ax[1][0].legend()
+
+    if outname is not None:
+        plt.savefig(outname)
+    if show:
+        plt.show()
+
+
+def plot_te_distribution_avgbyskill(dataDB, pTHR, outname=None, show=True):
     meanTE = {}
     meanNConnConf = {}
     expertMap = {True: "Expert", False: "Naive"}

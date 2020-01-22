@@ -12,8 +12,6 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
-import cv2
-
 ###############################
 # Export Root Directory
 ###############################
@@ -37,7 +35,7 @@ from codes.moviemaker.draggable import DraggableCircle
 from codes.moviemaker.moviemakerapp import Ui_MovieMakerApp
 import codes.moviemaker.qthelper as qthelper
 from codes.moviemaker.opencv_lib import cvWriter
-from codes.moviemaker.matplotlib_helper import fig2numpy
+from codes.moviemaker.matplotlib_helper import fig2numpy, get_fig_size_pixels
 
 from codes.lib.data_io.os_lib import getfiles_walk
 from codes.lib.data_io.matlab_lib import loadmat
@@ -64,38 +62,25 @@ GUI for making functional connectivity videos
 = TODO
 ===================
 
-[+] Disable Table editing
-[+] Optimize refresh
-[+] Disable table and combo actions during edit
-[+] Enable/Disable GUI components based on global state
-[ ] Solve Keyboard KeyEvent not activaing
-[ ] Move most dictionaries from Key to integer value. Only keep dict for interacting with table
+[ ] Core        ::: MAKE SURE EDGE DIRECTIONS ARE NOT INVERTED
+[ ] Core        ::: MAKE SURE TIME ON SLIDER MATCHES ACTUAL TIME OF LINKS
+[ ] Core        ::: Synchronize data and FC time. Make reader return both shifts along with dataset
 
+[ ] UI          ::: Solve Keyboard KeyEvent not activaing
+[ ] UI          ::: React combo box ::: restart slider; reload img
+[ ] UI          ::: Autogen circles ::: If have FC, auto-update edges based on FC
+[ ] UI          ::: Tickbox-based ::: If have FC, auto-update edges based on FC
+[ ] UI          ::: Impl Settings Tab
 
+[ ] Performance ::: Can optimize write-time by optional disabling canvas.draw? 
+[ ] Tidy Code   ::: Move most dictionaries from Key to integer value. Only keep dict for interacting with table
 
-[ ] Circles :: Represent Regions
-    [+] Extract from datafile
-    [ ] Enable variable radius
-    [+] Label on plot
-    [ ] Optional brightness based on data trace
-    [+] Enable drag
-    [+] Enable save/load position based on index
-    [+] Disable individual regions
-
-[ ] Edges :: Represent Connections
-    [ ] Visible based on P < 0.01
-      [ ] Optional 2 directed edges based on P 
-      [ ] Optional undirected edge based on (P + P^T)/2
-    [ ] Optional edge thickness from TE
-    [ ] !!!!!!! MAKE SURE EDGE DIRECTIONS ARE NOT INVERTED
-    [ ] !!!!!!! MAKE SURE TIME ON SLIDER MATCHES ACTUAL TIME OF LINKS
-    
-[ ] Movie:
-  [ ] Slider to select min-max timestep
-  [ ] Preview in app
-  [ ] Save to movie file
-  [ ] Timestamp on movie
-  [ ] Synchronize data and FC time. Make reader return both shifts along with dataset
+[ ] Extension   ::: Allow edit circle names, react accordingly
+[ ] Extension   ::: Circle radius based on IN/OutDegree
+[ ] Extension   ::: Circle brightness based on data trace
+[ ] Extension   ::: Undirected edges based on (P + P^T)/2
+[ ] Extension   ::: Settings ::: Crop time window [min/max in seconds]
+[ ] Extension   ::: Settings ::: Timestamp on movie
 '''
 
 #######################################################
@@ -149,6 +134,9 @@ class MovieMakerApp():
 
     def init_plot_layout(self):
         # Setup plotting
+        # self.movieFigSize = (6, 6)
+        # self.movieFigDPI = 100
+        # self.movieFigure, self.movieAxis = plt.subplots(figsize=self.movieFigSize, dpi=self.movieFigDPI)
         self.movieFigure, self.movieAxis = plt.subplots()
         self.movieAxis.axis('off')
 
@@ -162,6 +150,11 @@ class MovieMakerApp():
         self.globalStateDict[key] = val
         print("Global State of", key, "updated to", val)
         self.react_global_state_change()
+
+
+    #######################################################
+    # Reacting to GUI elements
+    #######################################################
 
 
     # Enable/Disable actions based on global state
@@ -376,30 +369,67 @@ class MovieMakerApp():
         try_load(self.load_node_layout,   self.pathLayout, "Path to node layout file not initialized, skipping")
 
 
+    # TODO: Find out why color-swap ::: matplotlib or openCV. Move adjustment into either to matplotlibhelper or cv_wrapper
     def export_movie(self):
         pathTmp = os.path.dirname(self.pathMovie) if self.pathMovie is not None else "./"
-        self.pathNodeLayoutFile = QtWidgets.QFileDialog.getSaveFileName(self.gui.centralWidget, "Save Movie File", pathTmp, "Movie Files (*.avi)")
+        self.pathNodeLayoutFile = QtWidgets.QFileDialog.getSaveFileName(self.gui.centralWidget, "Save Movie File", pathTmp, "Movie Files (*.avi)")[0]
+        if self.pathNodeLayoutFile == "":
+            print("No file selected, skipping")
+            return
 
-        print("Started writing movie to", self.pathNodeLayoutFile)
+        figSize = get_fig_size_pixels(self.movieFigure)
+        figSize = (figSize[1], figSize[0])
+
+        print("Started writing movie of shape", figSize, "to", self.pathNodeLayoutFile)
         self.gui.centralWidget.setEnabled(False)
 
-        from codes.moviemaker.opencv_lib import cvWriter
-        from codes.moviemaker.matplotlib_helper import fig2numpy
-
-        figW = int(600)
-        figH = int(600)
-        dpi = int(300)
-
-        with cvWriter(self.pathNodeLayoutFile, (figW, figH), isColor=True) as movieWriter:
-            self.movieFigure.set_size_inches(figW, figH)
-            self.movieFigure._set_dpi(dpi)
+        with cvWriter(self.pathNodeLayoutFile, figSize, frate=4, isColor=True) as movieWriter:
             for i in range(len(self.timesFC)):
-                print("Writing frame", i)
                 self.gui.movieFrameSlider.setValue(i)
-                movieWriter.write(fig2numpy(self.movieFigure))
+                thisFig = fig2numpy(self.movieFigure)[:, :, [2,1,0]]
+                print("Writing frame", i, "of shape", thisFig.shape)
+                movieWriter.write(thisFig)
 
         self.gui.centralWidget.setEnabled(True)
         print("Finished writing movie")
+
+
+    def movie_slider_react(self):
+        thisFrame = self.gui.movieFrameSlider.value()
+        self.gui.movieFrameLabel.setText(str(np.round(self.timesFC[thisFrame], 2)))
+        self.update_plot()
+
+
+    # Arrange nodes on a circle
+    def autogen_node_layout(self):
+        if not self.globalStateDict["HAVE_NODES"]:
+            print("Can't generate node locations if there are no nodes")
+        else:
+            channelEnabledDict = self.parse_channel_table()
+            channelCoordsDict = {}
+
+            dAlpha = 2 * np.pi / self.nChannel
+            for i, key in enumerate(channelEnabledDict.keys()):
+                x = self.AUTOGEN_CIRCLE_RADIUS * np.cos(i * dAlpha)
+                y = self.AUTOGEN_CIRCLE_RADIUS * np.sin(i * dAlpha)
+                channelCoordsDict[key] = [x, y]
+
+            self.plot_circles(channelCoordsDict)
+            self.set_global_state("HAVE_NODE_COORDS", True)
+            self.plot_edges()
+
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Plus or e.key() == QtCore.Qt.Key_Minus:
+            self.fontsize += int(e.key() == QtCore.Qt.Key_Plus) - int(e.key() == QtCore.Qt.Key_Minus)
+            print("New font size", self.fontsize)
+            self.gui.centralWidget.setStyleSheet("font-size: " + str(self.fontsize) + "pt;")
+            self.gui.menuBar.setStyleSheet("font-size: " + str(self.fontsize) + "pt;")
+
+
+    #######################################################
+    # Auxiliary GUI routines
+    #######################################################
 
 
     # Extract values from channel table by column
@@ -411,6 +441,11 @@ class MovieMakerApp():
         channelKeys = zip(channelIdxs, channelLabels)
 
         return dict(zip(channelKeys, channelEnabled))
+
+
+    def get_circle_pos_from_plot(self):
+        channelEnabledDict = self.parse_channel_table()
+        return {key: list(self.movieCircles[key[0]].center) for key in channelEnabledDict.keys()}
 
 
     # Updates checked states from file
@@ -437,23 +472,9 @@ class MovieMakerApp():
         self.gui.fcDataComboBox.blockSignals(oldState)
 
 
-    # Arrange nodes on a circle
-    def autogen_node_layout(self):
-        if not self.globalStateDict["HAVE_NODES"]:
-            print("Can't generate node locations if there are no nodes")
-        else:
-            channelEnabledDict = self.parse_channel_table()
-            channelCoordsDict = {}
-
-            dAlpha = 2 * np.pi / self.nChannel
-            for i, key in enumerate(channelEnabledDict.keys()):
-                x = self.AUTOGEN_CIRCLE_RADIUS * np.cos(i * dAlpha)
-                y = self.AUTOGEN_CIRCLE_RADIUS * np.sin(i * dAlpha)
-                channelCoordsDict[key] = [x, y]
-
-            self.plot_circles(channelCoordsDict)
-            self.set_global_state("HAVE_NODE_COORDS", True)
-            self.plot_edges()
+    #######################################################
+    # Auxiliary plotting routines
+    #######################################################
 
 
     def plot_circles(self, channelCoordsDict):
@@ -477,11 +498,6 @@ class MovieMakerApp():
         self.movieFigureCanvas.draw()
 
 
-    def get_circle_pos_from_plot(self):
-        channelEnabledDict = self.parse_channel_table()
-        return {key: list(self.movieCircles[key[0]].center) for key in channelEnabledDict.keys()}
-
-
     def plot_edges(self, iTime=None):
         self.movieEdgesIdxMap = {}
         self.movieEdges = []
@@ -500,12 +516,6 @@ class MovieMakerApp():
 
         self.set_global_state("HAVE_EDGES", True)
         self.movieFigureCanvas.draw()
-
-
-    def movie_slider_react(self):
-        thisFrame = self.gui.movieFrameSlider.value()
-        self.gui.movieFrameLabel.setText(str(np.round(self.timesFC[thisFrame], 2)))
-        self.update_plot()
 
 
     def update_circle(self, nodeKey, enabled=None, newCoord=None, iTime=None):
@@ -539,11 +549,14 @@ class MovieMakerApp():
 
 
     def update_edge(self, i, j, circleMoved=True, iTime=None):
+        haveTime = iTime is not None
+
         idxEdge = self.movieEdgesIdxMap[(i,j)]
         vis1 = self.movieCircles[i].get_visible()
         vis2 = self.movieCircles[j].get_visible()
-        visP = self.fcIsConn[i, j, iTime] if iTime is not None else True
+        visP = self.fcIsConn[i, j, iTime] if haveTime else True
         visEdge = vis1 and vis2 and visP
+        alphaEdge = self.edge_calc_alpha_from_fc(self.fcMag[i,j, iTime]) if haveTime and visEdge else 1
 
         if circleMoved:
             p1 = np.array(self.movieCircles[i].center)
@@ -551,7 +564,7 @@ class MovieMakerApp():
             p1sh, p2sh = self.edge_calc_rel_pos(p1, p2)
 
             posPrim = [p1sh, 0.03 * p1sh + 0.97 * p2sh]
-            kw = dict(arrowstyle="Simple,tail_width=1,head_width=8,head_length=8", color="red", visible=visEdge)
+            kw = dict(arrowstyle="Simple,tail_width=1,head_width=8,head_length=8", color="red", alpha=alphaEdge, visible=visEdge)
 
             self.movieEdgePatches[idxEdge].remove()
             self.movieEdges[idxEdge] = FancyArrowPatch(posPrim[0], posPrim[1], connectionstyle="arc3,rad=.2", **kw)
@@ -593,13 +606,10 @@ class MovieMakerApp():
         return p1sh, p2sh
 
 
-    def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Plus or e.key() == QtCore.Qt.Key_Minus:
-            self.fontsize += int(e.key() == QtCore.Qt.Key_Plus) - int(e.key() == QtCore.Qt.Key_Minus)
-            print("New font size", self.fontsize)
-            self.gui.centralWidget.setStyleSheet("font-size: " + str(self.fontsize) + "pt;")
-            self.gui.menuBar.setStyleSheet("font-size: " + str(self.fontsize) + "pt;")
-
+    def edge_calc_alpha_from_fc(self, fc):
+        if (fc is None) or fc <= 0:
+            raise ValueError("Unexpected FC value", fc)
+        return np.min([2*fc, 1])
 
 ######################################################
 # Start the QT window
