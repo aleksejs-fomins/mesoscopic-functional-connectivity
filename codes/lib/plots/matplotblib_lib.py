@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import mannwhitneyu
 
 # Convert y-axis from fractions to percent
 def set_percent_axis_y(ax):
@@ -25,7 +26,7 @@ def hist_int(ax, x, labels=None, xmin=None, xmax=None):
     set_percent_axis_y(ax)
 
 
-def bins_multi(ax, groupLabels, binLabels, data):
+def bins_multi(ax, groupLabels, binLabels, data, rankTest=False):
 
     def autolabel(rects):
         """Attach a text label above each bar in *rects*, displaying its height."""
@@ -41,6 +42,15 @@ def bins_multi(ax, groupLabels, binLabels, data):
     nGroup = len(groupLabels)
     nBin = len(binLabels)
 
+    if rankTest:
+        if nBin != 2:
+            raise ValueError("Not implemented for number of bins", nBin)
+
+        for iGroup in range(nGroup):
+            pVal = mannwhitneyu(data[0][iGroup], data[1][iGroup])
+            print("For", groupLabels[iGroup], "Signed-rank test has pval", pVal)
+
+
     widthGroupDelta  = 1    # Gap between groups
     rationGroupGap   = 0.5  # Ratio of gap between groups vs group width
 
@@ -49,14 +59,16 @@ def bins_multi(ax, groupLabels, binLabels, data):
 
     x = np.arange(nGroup) * widthGroupDelta
 
+    groupRects = []
     for iBin, (binData, binLabel) in enumerate(zip(data, binLabels)):
         muBin = [np.mean(v) for v in binData]
-        stdBin = [np.std(v) for v in binData]
+        stdMuBin = [np.std(v) / np.sqrt(len(v)) for v in binData]
 
         shiftBin = -(widthGroup - widthBin)/2 + iBin*widthBin
-        rects = ax.bar(x + shiftBin, muBin, widthBin, yerr=stdBin, label=binLabel)
-        autolabel(rects)
+        groupRects += [ax.bar(x + shiftBin, muBin, widthBin, yerr=stdMuBin, label=binLabel, capsize=5)]
+        #autolabel(groupRects[-1])
 
     ax.set_xticks(x)
     ax.set_xticklabels(groupLabels)
     ax.legend()
+    return groupRects

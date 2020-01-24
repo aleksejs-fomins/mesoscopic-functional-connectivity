@@ -22,20 +22,20 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
         'cc-out-normalized'       : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
         'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
     }
-    
+
+    # Note: Some files are a bit shorter than others. We truncate time to the shortest
     nMetrics = len(binaryMetrics)
     nFiles = len(dataLst)
-    nTimes = len(timesLst[0])    
-    metricArr = np.zeros((nMetrics, nFiles, nTimes))
-    timesAll = timesLst[0]
+    nTimesMin = np.min([len(t) for t in timesLst])
+    idxnTimesMin = np.argmin([len(t) for t in timesLst])
+    timesMin = timesLst[idxnTimesMin]
+    metricArr = np.zeros((nMetrics, nFiles, nTimesMin))
     for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-        assert np.array_equal(times, timesAll), "Times for all files must be equal"
-        
         te, lag, p = data
         binaryConnMat = graph_lib.is_conn(p, pTHR)
         
         for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
-            metricArr[iMetric, iFile] = np.array([metricFunc(binaryConnMat[:,:,iTime]) for iTime in range(nTimes)])
+            metricArr[iMetric, iFile] = np.array([metricFunc(binaryConnMat[:,:,iTime]) for iTime in range(nTimesMin)])
             
     # Metrics by time
     plt.rcParams.update({'font.size': 16})
@@ -43,9 +43,9 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     for iMetric, (metricName, metricFunc) in enumerate(binaryMetrics.items()):
         metricMean = np.mean(metricArr[iMetric], axis=0)
         metricStd  = np.std(metricArr[iMetric], axis=0)
-        
-        ax[iMetric].plot(timesAll, metricMean)
-        ax[iMetric].fill_between(timesAll, metricMean-metricStd, metricMean+metricStd, alpha=0.3)
+
+        ax[iMetric].plot(timesMin, metricMean)
+        ax[iMetric].fill_between(timesMin, metricMean-metricStd, metricMean+metricStd, alpha=0.3)
         ax[iMetric].set_title("nPoints="+str(nFiles))
         ax[iMetric].set_xlabel("time, seconds")
         ax[iMetric].set_ylabel(metricName)
@@ -59,6 +59,7 @@ def plot_te_binary_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, ti
     
     # ax[iMetric].plot(times, metricByTime, label=label[12:17], color=((iFile / nFiles), 0, 0))
     # ax[iMetric].legend()
+    #print("Saving figure to", outname)
     plt.savefig(outname)
     plt.close()
 
@@ -80,23 +81,21 @@ def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, tim
         'cc-out-normalized'       : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
         'cc-out-unnormalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
     }
-    
-    
+
     # Compute
     nMetrics = len(floatMetrics)
     nFiles = len(dataLst)
-    nTimes = len(timesLst[0])    
-    metricArr = np.zeros((nMetrics, nFiles, nTimes))
-    timesAll = timesLst[0]
+    nTimesMin = np.min([len(t) for t in timesLst])
+    idxnTimesMin = np.argmin([len(t) for t in timesLst])
+    timesMin = timesLst[idxnTimesMin]
+    metricArr = np.zeros((nMetrics, nFiles, nTimesMin))
     for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-        assert np.array_equal(times, timesAll), "Times for all files must be equal"
-        
         te, lag, p = data
         teZeroNAN = np.copy(te)
         teZeroNAN[~graph_lib.is_conn(p, pTHR)] = 0   # Set TE of all non-existing connections to zero
         
         for iMetric, (metricName, metricFunc) in enumerate(floatMetrics.items()):
-            metricArr[iMetric, iFile] = np.array([metricFunc(teZeroNAN[:,:,iTime]) for iTime in range(nTimes)])
+            metricArr[iMetric, iFile] = np.array([metricFunc(teZeroNAN[:,:,iTime]) for iTime in range(nTimesMin)])
             
     # Plot
     plt.rcParams.update({'font.size': 16})
@@ -105,8 +104,8 @@ def plot_te_float_metrics_bytime(outname, timesLst, dataLst, labelLst, pTHR, tim
         metricMean = np.mean(metricArr[iMetric], axis=0)
         metricStd  = np.std(metricArr[iMetric], axis=0)
         
-        ax[iMetric].plot(timesAll, metricMean)
-        ax[iMetric].fill_between(timesAll, metricMean-metricStd, metricMean+metricStd, alpha=0.3)
+        ax[iMetric].plot(timesMin, metricMean)
+        ax[iMetric].fill_between(timesMin, metricMean-metricStd, metricMean+metricStd, alpha=0.3)
         ax[iMetric].set_title("nPoints="+str(nFiles))
         ax[iMetric].set_xlabel("time, seconds")
         ax[iMetric].set_ylabel(metricName + " transfer entropy")
@@ -150,8 +149,6 @@ def plot_te_binary_metrics_rangebydays(outname, timesLst, dataLst, labelLst, ran
     
         # Compute metrics
         for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-            assert np.array_equal(times, timesAll), "Times for all files must be equal"
-
             rng = slice_sorted(times, rangeSeconds)
 
             te, lag, p = data
@@ -220,8 +217,6 @@ def plot_te_float_metrics_rangebydays(outname, timesLst, dataLst, labelLst, rang
 
         # Compute metrics
         for iFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-            assert np.array_equal(times, timesAll), "Times for all files must be equal"
-
             rng = slice_sorted(times, rangeSeconds)
 
             teRng, lagRng, pRng = data[..., rng[0]:rng[1]]
@@ -262,7 +257,7 @@ def plot_te_nconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, p
     for rangeName, rangeSeconds in rangesSec.items():    
         atLeast1ConnPerSession = []
         for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-            rng = slice_sorted(times, rangeSeconds[0])
+            rng = slice_sorted(times, rangeSeconds)
             
             te, lag, p = data
             pRng = p[:,:,rng[0]:rng[1]]
@@ -289,21 +284,24 @@ def plot_te_nconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, p
 def plot_te_avgnconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
     fig, ax = plt.subplots(ncols=3, figsize=(30, 10))
 
-    nFiles = len(dataLst)
+
     for rangeName, rangeSeconds in rangesSec.items():
         freqConnRange = []
+        labelsFiltered = []
         for idxFile, (times, data, label) in enumerate(zip(timesLst, dataLst, labelLst)):
-            rng = slice_sorted(times, rangeSeconds[0])
+            rng = slice_sorted(times, rangeSeconds)
             te, lag, p = data
             pRng = p[:,:,rng[0]:rng[1]]
-            
-            conn1DOffDiag = graph_lib.is_conn(pRng, pTHR)[graph_lib.offdiag_idx(p.shape[0])]
-            freqConnRange += [np.mean(conn1DOffDiag, axis=1)]
+
+            if p.shape[0] in (12, 48):
+                labelsFiltered += [label]
+                conn1DOffDiag = graph_lib.is_conn(pRng, pTHR)[graph_lib.offdiag_idx(p.shape[0])]
+                freqConnRange += [np.mean(conn1DOffDiag, axis=1)]
 
         freqConnPerSession = [np.mean(freq) for freq in freqConnRange]
         freqSharedConn = [np.nan]
         relFreqSharedConn = [np.nan]
-        for idxFile in range(1, nFiles):
+        for idxFile in range(1, len(freqConnRange)):
             summ = freqConnRange[idxFile-1] + freqConnRange[idxFile]
             diff = freqConnRange[idxFile-1] - freqConnRange[idxFile]
             summ_L1 = np.mean(np.abs(summ))
@@ -324,12 +322,13 @@ def plot_te_avgnconn_rangebydays(outname, timesLst, dataLst, labelLst, rangesSec
     ax[0].set_ylim([0, 0.6])
     ax[1].set_ylim([0, 0.6])
     ax[2].set_ylim([0, 1])
-    ax[0].set_xticks(list(range(nFiles)))
-    ax[1].set_xticks(list(range(nFiles)))
-    ax[2].set_xticks(list(range(nFiles)))
-    ax[0].set_xticklabels([label[12:17] for label in labelLst])
-    ax[1].set_xticklabels([label[12:17] for label in labelLst])
-    ax[2].set_xticklabels([label[12:17] for label in labelLst])
+    labelIdxs = list(range(len(labelsFiltered)))
+    ax[0].set_xticks(labelIdxs)
+    ax[1].set_xticks(labelIdxs)
+    ax[2].set_xticks(labelIdxs)
+    ax[0].set_xticklabels([label[12:17] for label in labelsFiltered])
+    ax[1].set_xticklabels([label[12:17] for label in labelsFiltered])
+    ax[2].set_xticklabels([label[12:17] for label in labelsFiltered])
     ax[0].legend()
     ax[1].legend()
     ax[2].legend()
@@ -379,7 +378,7 @@ def plot_te_shared_link_scatter(outname, timesLst, dataLst, labelLst, rangesSec,
     plt.close()
 
 
-def plot_te_distribution(outname, dataLst, labelLst, pTHR, timestep):
+def plot_te_distribution(outname, timesLst, dataLst, labelLst, rangesSec, pTHR, timestep):
     plt.figure(figsize=(10, 10))
     
     nFiles = len(dataLst)

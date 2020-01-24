@@ -11,7 +11,7 @@ def filter_rows_colval(df, colname, val):
 #    df.query('C1>=0 and C1<=20 and C2>=0 and C2<=20 and C3>=0 and C3<=20')
 def filter_rows_colvals(df, coldict):
     # Query likes strings to be wrapped in quotation marks for later evaluation
-    strwrap = lambda val: '"' + val + '"' if isinstance(val, str) else val
+    strwrap = lambda val: '"' + val + '"' if isinstance(val, str) else str(val)
     query = ' and '.join([colname+'=='+strwrap(val) for colname, val in coldict.items()])
     return df.query(query)
 

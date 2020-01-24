@@ -323,7 +323,7 @@ class DataFCDatabase :
     # Provide rows for all sessions of the same mouse, iterating over combinations of other anaylsis parameters
     def mouse_iterator(self):
         sweepCols = ["mousename",  "analysis", "trial", "range", "method"]
-        sweepValues = [self.summaryTE[colname].values() for colname in sweepCols]
+        sweepValues = [self.summaryTE[colname].keys() for colname in sweepCols]
         sweepProduct = list(itertools.product(*sweepValues))
 
         for sweepComb in sweepProduct:
