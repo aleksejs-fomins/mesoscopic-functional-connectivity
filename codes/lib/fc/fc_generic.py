@@ -20,8 +20,6 @@ Note that some methods do not have a single target implementation, so can't para
 '''
 
 
-
-
 def preprocess_data(data, library, settings):
     if library == 'idtxl':
         return idtxl_wrapper.preprocess_data(data, settings)

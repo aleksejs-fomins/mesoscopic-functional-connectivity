@@ -119,3 +119,46 @@ def resample(x1, y1, x2, param):
             # y2[i2] = w_ker.dot(y1)
         
     return y2
+
+
+# Resample all arrays to the overlapping range using piecewise-linear interpolation
+def resample_shortest_linear(xLst2D, yLst2D, timestep=None, assume_same=True):
+    '''
+     Algorithm:
+        1. Pick the shortest of all ranges, and use it for all other datasets
+        2. For each dataset, construct piecewise-linear interpolator
+        3. Sample all points for that shortest range
+    '''
+
+    # If we suspect that the arrays are same, we can just test that their lengths are same
+    # and skip the resampling procedure, if it is not necessary
+    if assume_same:
+        nXLst = np.array([len(x) for x in xLst2D])
+        if np.all(nXLst == nXLst[0]):
+            return xLst2D[0], np.array(yLst2D)
+        else:
+            print("positions are not same, resampling to shortest overlap")
+
+    # Guess timestep
+    timestep = timestep if timestep is not None else xLst2D[0][1] - xLst2D[0][0]
+
+    # Find range
+    xMin = -np.inf
+    xMax = np.inf
+    for x in xLst2D:
+        xMin = np.max([xMin, np.min(x)])
+        xMax = np.min([xMax, np.max(x)])
+
+    assert xMin < xMax, "The overlap is zero"
+
+    # Generate target steps
+    nX = int(np.round((xMax - xMin)/timestep)) + 1
+    xTarget = xMin + timestep * np.arange(nX)
+
+    # Perform linear interpolation
+    rezLst2D = [np.interp(xTarget, xLst, yLst) for xLst, yLst in zip(xLst2D, yLst2D)]
+
+    # Return results
+    return xTarget, np.array(rezLst2D)
+
+

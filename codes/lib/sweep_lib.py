@@ -9,11 +9,11 @@ Modifiers:
 
 
 
-# Provide slices of a dataset of shape [nNode, nStep]
+# Provide slices of a dataset of shape [nNode, nStep, nTrial]
 # If window parameter is provided, a sweep is performed over time dimension
 # Otherwise, trial and time dimensions are concetenated
-def sweep_generator(data, settings):
-    nNode, nTime, nTrial = data.shape()
+def data_sweep_generator(data, settings):
+    nNode, nTime, nTrial = data.shape
     if settings['window'] is None:
         yield data.reshape(nNode, nTime * nTrial)
     else:
@@ -25,8 +25,8 @@ def sweep_generator(data, settings):
 # Provide slices of a dataset of shape [nStep], individually for each channel
 # If window parameter is provided, a sweep is performed over time dimension
 # Otherwise, trial and time dimensions are concetenated
-def sweep_generator_1D(data, settings):
-    nNode, nTime, nTrial = data.shape()
+def data_sweep_generator_1D(data, settings):
+    nNode, nTime, nTrial = data.shape
     for iNode in range(nNode):
         if settings['window'] is None:
             yield data[iNode].flatten()
@@ -34,3 +34,13 @@ def sweep_generator_1D(data, settings):
             w = settings['window']
             for iTime in range(nTime - w):
                 yield data[iNode, iTime : iTime + w, :].flatten()
+
+
+def sweep_generator(data, settings):
+    nNode = data.shape[0]
+
+    dataSweepStyleDict = {
+        ""
+    }
+
+    for method in settings

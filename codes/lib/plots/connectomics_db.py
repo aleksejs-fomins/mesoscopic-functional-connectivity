@@ -13,9 +13,19 @@ from codes.lib.stat.stat_lib import bootstrap_resample_function
 from codes.lib.stat.stat_shared import log_pval_H0_shared_random
 
 
-def plot_generic(plotFunc, dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ext='.svg'):
-    # Get timestep
-    timestep = dataDB.summaryTE['timestep']
+def plot_generic(dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ext='.svg'):
+    connectomicsMetricsDict = {
+        "connectivity_nconn_vs_time"         : connectomics.plot_fc_binary_vs_time,
+        "connectivity_nconn_vs_days"         : connectomics.plot_fc_binary_vs_days,
+        "connectivity_fc_vs_time"            : connectomics.plot_fc_mag_vs_time,
+        "connectivity_fc_vs_days"            : connectomics.plot_fc_mag_vs_days,
+        "connectivity_avgnconn_vs_days"      : connectomics.plot_fc_binary_avg_vs_time,
+        "connectivity_nconn_shared_avg"      : connectomics.plot_fc_binary_shared_avg,
+        "connectivity_fc_vs_performance"     : connectomics.plot_fc_vs_performance
+    }
+
+    # Get plot function
+    plotFunc = connectomicsMetricsDict[plotPrefix]
 
     datasetSuffix = '_'.join([
         dataDB.summaryTE["downsampling"],
@@ -25,55 +35,29 @@ def plot_generic(plotFunc, dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ex
 
     for sweepDict, rows in dataDB.mouse_iterator():
         sweepSuffix = '_'.join(sweepDict.values())
+        outfname = os.path.join(outpath, '_'.join([plotPrefix, datasetSuffix, sweepSuffix]) + ext)
         print("--", sweepSuffix)
 
-        times = [dataDB.dataTEtimes[idx] for idx in rows.index]
-        data  = [dataDB.dataTEFC[idx] for idx in rows.index]
-        labels = rows['mousekey']
+        dataLabels = rows['mousekey']
 
-        outfname = os.path.join(outpath, '_'.join([plotPrefix, datasetSuffix, sweepSuffix]) + ext)
+        timesLst = []
+        dataLst = []
         if rangesSec is None:
-            plotFunc(outfname, times, data, labels, pTHR, timestep)
+            rangeLabels = ["alltimes"]
+            times, data = dataDB.get_fc_data(rows, rangesSec)
+            timesLst += [times]
+            dataLst += [data]
         else:
-            plotFunc(outfname, times, data, labels, rangesSec, pTHR, timestep)
+            rangeLabels = list(rangesSec.keys())
+            for rng in rangesSec.values():
+                times, data = dataDB.get_fc_data(rows, rng)
+                timesLst += [times]
+                dataLst += [data]
+
+        plotFunc(outfname, timesLst, dataLst, dataLabels, rangeLabels, pTHR)
 
 
-def plot_te_binary_metrics_bytime(dataDB, pTHR, outpath, ext='.svg'):
-    plotFunc = connectomics.plot_te_binary_metrics_bytime
-    plot_generic(plotFunc, dataDB, pTHR, outpath, 'metrics_connmat_bytime', ext=ext)
-
-
-def plot_te_float_metrics_bytime(dataDB, pTHR, outpath, ext='.svg'):
-    plotFunc = connectomics.plot_te_float_metrics_bytime
-    plot_generic(plotFunc, dataDB, pTHR, outpath, 'metrics_te_bytime', ext=ext)
-
-
-def plot_te_binary_metrics_rangebydays(dataDB, pTHR, rangesSec, outpath, ext='.svg'):
-    plotFunc = connectomics.plot_te_binary_metrics_rangebydays
-    plot_generic(plotFunc, dataDB, pTHR, outpath, 'metrics_connmat_rangebytime', rangesSec=rangesSec, ext=ext)
-
-
-def plot_te_float_metrics_rangebydays(dataDB, pTHR, rangesSec, outpath, ext='.svg'):
-    plotFunc = connectomics.plot_te_float_metrics_rangebydays
-    plot_generic(plotFunc, dataDB, pTHR, outpath, 'metrics_te_rangebytime', rangesSec=rangesSec, ext=ext)
-
-
-def plot_te_avgnconn_rangebydays(dataDB, pTHR, rangesSec, outpath, ext='.svg'):
-    plotFunc = connectomics.plot_te_avgnconn_rangebydays
-    plot_generic(plotFunc, dataDB, pTHR, outpath, 'metrics_avgnconn_rangebytime', rangesSec=rangesSec, ext=ext)
-
-
-def plot_te_shared_link_scatter(dataDB, pTHR, rangesSec, outpath, ext='.svg'):
-    plotFunc = connectomics.plot_te_shared_link_scatter
-    plot_generic(plotFunc, dataDB, pTHR, outpath, 'shared_link_scatter', rangesSec=rangesSec, ext=ext)
-
-
-def plot_te_distribution(dataDB, pTHR, rangesSec, outpath, ext='.svg'):
-    plotFunc = connectomics.plot_te_distribution
-    plot_generic(plotFunc, dataDB, pTHR, outpath, 'te_distr', rangesSec=rangesSec, ext=ext)
-
-
-def plot_te_distribution_avgbyperformance(dataDB, pTHR, outname=None, show=True):
+def plot_fc_vs_performance(dataDB, pTHR, outname=None, show=True):
     '''
        Scatter nConn,TE vs Performance + expertLine
        2xBin mean(nConn), mean(TE) naive&expert + (* from wilcoxon rank-sum)
@@ -175,7 +159,7 @@ def plot_te_distribution_avgbyperformance(dataDB, pTHR, outname=None, show=True)
         plt.show()
 
 
-def plot_te_shared_link_pval_by_performance(dataDB, pTHR, rangesSec, outname=None, show=True):
+def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec, outname=None, show=True):
     FPS = 20
     RANGE_STEP = (int(FPS * rangesSec[0]), int(FPS * rangesSec[1]))
     nMethod = len(dataDB.summaryTE['method'])

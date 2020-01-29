@@ -11,9 +11,6 @@ def data_transpose_canonical(data, settings):
     return data.transpose(permShape)
 
 
-
-
-
 # Compute entropy individually for each channel
 # TODO: Impl parallel version
 def entropy1D(data, settings):

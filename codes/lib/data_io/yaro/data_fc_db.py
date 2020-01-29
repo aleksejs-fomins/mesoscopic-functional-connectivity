@@ -4,7 +4,7 @@ import itertools
 
 from os.path import basename, dirname, join, abspath
 
-from codes.lib.aux_functions import bin_data_by_keys, strlst2date
+from codes.lib.aux_functions import bin_data_by_keys, strlst2date, slice_sorted
 from codes.lib.metrics.mouse_performance import mouse_performance_allsessions
 from codes.lib.pandas_lib import filter_rows_colval, filter_rows_colvals
 from codes.lib.data_io.os_lib import getfiles_walk
@@ -318,6 +318,23 @@ class DataFCDatabase :
 
     def get_rows(self, frameName, coldict):
         return filter_rows_colvals(self.metaDataFrames[frameName], coldict)
+
+
+    # Find FC data for specified rows, then crop to selected time range
+    def get_fc_data(self, rows, rangeSec=None):
+        timesFC = []
+        dataFC = []
+
+        for idx in rows.index:
+            if rangeSec is None:
+                timesFC += [self.dataTEtimes[idx]]
+                dataFC += [self.dataTEFC[idx]]
+            else:
+                rng = slice_sorted(timesFC, rangeSec)
+                timesFC += [self.dataTEtimes[idx][rng[0]:rng[1]]]
+                dataFC += [self.dataTEFC[idx][..., rng[0]:rng[1]]]
+
+        return timesFC, dataFC
 
 
     # Provide rows for all sessions of the same mouse, iterating over combinations of other anaylsis parameters
