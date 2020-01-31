@@ -74,9 +74,9 @@ param = {
     'min_lag_sources' : 0
 }
 
-nTime = 10
+nTime = 100
 nTrial = 10
-nCoreArr = np.arange(4, 5)
+nCoreArr = np.arange(1,5)
 
 ########################
 # Sweep parameters
@@ -114,7 +114,9 @@ for dataName in ["Linear", "Circular"]:
             for nCore in nCoreArr:
                 tStart = time()
                 rez = parallel_metric_2d([data], library, [estimator], paramThis, parTarget=parTarget, serial=False, nCore=nCore)
+                rez = rez[estimator][0]
                 timesDict[taskKey] += [time() - tStart]
+
                 ptests += [taskKey + (nCore, rez[2][0,1])]
 
                 write_fc_lag_p_fig(rez, outpath, taskKey)
@@ -130,8 +132,11 @@ print("Off diagonal p-values")
 print(np.array(ptests))
 
 plt.figure()
-plt.title("Timing in seconds")
+plt.title("Strong scaling")
 for k,v in timesDict.items():
-    plt.plot(nCoreArr, v, label=str(k))
+    plt.semilogy(nCoreArr, v, label=str(k))
+
+plt.xlabel("nCores")
+plt.xlabel("runtime, seconds")
 plt.legend()
 plt.show()

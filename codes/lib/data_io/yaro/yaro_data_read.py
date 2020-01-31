@@ -9,7 +9,7 @@ from codes.lib.aux_functions import merge_dicts
 
 
 # Read data and behaviour matlab files given containing folder
-def read_neuro_perf(folderpath, verbose=True):
+def read_neuro_perf(folderpath, verbose=True, withPerformance=True):
     # Read MAT file from command line
     if verbose:
         print("Reading Yaro data from", folderpath)
@@ -22,18 +22,20 @@ def read_neuro_perf(folderpath, verbose=True):
     nTrialsData = data.shape[0]
     behavior    = loadmat(fname_behaviour, waitRetry=waitRetry)
     behavior = {k : v for k, v in behavior.items() if k[0] != '_'}      # Get rid of useless fields in behaviour
-    performance = mouse_performance_single_session(nTrialsData, behavior)
 
-    if (nTrialsData < len(behavior['iGO']) + len(behavior['iNOGO'])):
-        print("Warning: For", os.path.basename(folderpath), "nTrials inconsistent with behaviour", nTrialsData, len(behavior['iGO']), len(behavior['iNOGO']))
+    if withPerformance:
+        if (nTrialsData < len(behavior['iGO']) + len(behavior['iNOGO'])):
+            print("Warning: For", os.path.basename(folderpath), "nTrials inconsistent with behaviour", nTrialsData, len(behavior['iGO']), len(behavior['iNOGO']))
 
-    if not os.path.exists(fpath_performance):
-        print("--Warning: No performance metrics found for", os.path.dirname(folderpath), "; Using calculated")
-    else:
-        fname_performance = os.path.join(fpath_performance, "performance.mat")
-        performanceExt = loadmat(fname_performance, waitRetry=waitRetry)['performance']
-        if performanceExt != performance:
-            print("Calculated performance", performance, "does not match external", performanceExt)
+        performance = mouse_performance_single_session(nTrialsData, behavior)
+
+        if not os.path.exists(fpath_performance):
+            print("--Warning: No performance metrics found for", os.path.dirname(folderpath), "; Using calculated")
+        else:
+            fname_performance = os.path.join(fpath_performance, "performance.mat")
+            performanceExt = loadmat(fname_performance, waitRetry=waitRetry)['performance']
+            if performanceExt != performance:
+                print("Calculated performance", performance, "does not match external", performanceExt)
     
     # Convert trials structure to a dictionary
     behavior['trials'] = merge_dicts([matstruct2dict(obj) for obj in behavior['trials']])
@@ -70,8 +72,11 @@ def read_neuro_perf(folderpath, verbose=True):
             print("--WARNING: index", idx, "appears multiple times:", keysRep)
             
         #assert behIndices.count(idx) == 1, "Found duplicates in behaviour indices"
-    
-    return data, behavior, performance
+
+    if withPerformance:
+        return data, behavior, performance
+    else:
+        return data, behavior
 
 
 # # Read multiple neuro and performance files from a root folder

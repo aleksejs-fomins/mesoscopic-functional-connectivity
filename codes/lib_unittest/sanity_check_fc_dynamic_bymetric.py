@@ -10,7 +10,7 @@ rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
 print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
-from codes.lib.info_metrics.info_metrics_generic import fc_parallel
+from codes.lib.info_metrics.info_metrics_generic import parallel_metric_2d
 
 
 # IDTxl parameters
@@ -44,7 +44,7 @@ def generate_data(nTrial, nData, isSelfPredictive, isLinear, isShifted):
 
 
 # Plot phase-space of different shifts of both variables wrt each other. Produces one plot [nSWEEP x 5]
-class phaseSpaceFigures():
+class PhaseSpaceFigures:
     def __init__(self, nSweep):
         self.fig1, self.axData = plt.subplots(nrows=nSweep, ncols=5, tight_layout=True)
         self.fig1.suptitle("Phase space plots")
@@ -69,7 +69,7 @@ class phaseSpaceFigures():
 
 
 # Plot FC, LAG, and P-VAL matrices for each SWEEP and ALG combination. Produces 3 plots
-class metricFigures():
+class MetricFigures():
     def __init__(self, figKeys, nSweep, algKeys):
         nAlg = len(algKeys)
 
@@ -138,8 +138,8 @@ nSweep = len(varSweep)
 # Figures
 ########################
 
-psFigs = phaseSpaceFigures(nSweep)
-metricFigs = metricFigures(["values", "lags", "p-values"], nSweep, algNames)
+psFigs = PhaseSpaceFigures(nSweep)
+metricFigs = MetricFigures(["values", "lags", "p-values"], nSweep, algNames)
 
 
 ########################
@@ -166,7 +166,8 @@ for iSweep, var in enumerate(varSweep):
 
         # Compute metric
         tStart = time()
-        rez = fc_parallel(data, library, estimator, paramThis, parTarget=parTarget, serial=False, nCore=nCore)
+        rez = parallel_metric_2d([data], library, [estimator], paramThis, parTarget=parTarget, serial=False, nCore=nCore)
+        rez = rez[estimator][0]
         performanceTimes += [(var, algName, time() - tStart)]
 
         # Plot results

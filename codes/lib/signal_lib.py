@@ -37,18 +37,25 @@ def approx_decay_conv(data, tau, dt):
 #
 # - By convention, truncate tail if number of points is not divisible by nt.
 #   It is preferential to lose the tail than to have non-uniform time spacing
+#
+# Can handle arbitrary dimension, as long as downsampling is done along the first dimension
 def downsample_int(x1, y1, nt):
-    nTimesOrig = len(x1)
-    nTimesFinal = nTimesOrig // nt
-    x2 = np.zeros(nTimesFinal)
-    y2 = np.zeros(nTimesFinal)
+    nTimes1 = len(x1)
+    nTimes2 = nTimes1 // nt
+    shape2 = y1.shape
+    assert shape2[0] == nTimes1, "Times array and selected axis of data array must match"
+    shape2[0] = nTimes2
 
-    for i in range(nTimesFinal):
+    x2 = np.zeros(nTimes2)
+    y2 = np.zeros(shape2)
+
+    for i in range(nTimes2):
         l, r = i*nt, (i+1)*nt
-        x2[i] = np.mean(x1[l:r])
-        y2[i] = np.mean(y1[l:r])
+        x2[i] = np.mean(x1[l:r], axis=0)
+        y2[i] = np.mean(y1[l:r], axis=0)
 
     return x2, y2
+    
 
 
 # Kernel for gaussian downsampling
