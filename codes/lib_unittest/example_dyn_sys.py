@@ -12,7 +12,7 @@ sys.path.append(rootpath)
 
 # import special libraries
 from codes.lib.models.test_lib import dynsys, dynsys_gettrueconn
-from codes.lib.fc.corr_lib import corr3D
+from codes.lib.info_metrics.corr_lib import corr3D
 
 # Set parameters
 param = {

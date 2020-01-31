@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from codes.lib.metrics.graph_lib import is_conn, offdiag_1D, diag_idx
-from codes.lib.metrics.accuracy import accuracyTests, accuracyIndices
+from codes.lib.stat.graph_lib import is_conn, offdiag_1D, diag_idx
+from codes.lib.stat.accuracy import accuracyTests, accuracyIndices
 from codes.lib.plots.matrix import imshowAddColorBar
 from codes.lib.plots.matplotblib_lib import set_percent_axis_y, hist_int
 

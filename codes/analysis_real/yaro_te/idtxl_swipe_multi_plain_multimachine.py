@@ -18,7 +18,7 @@ print("Appended root directory", rootpath)
 # User libraries
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
 from codes.lib.signal_lib import resample
-from codes.lib.fc.fc_generic import fc_parallel_multiparam
+from codes.lib.info_metrics.info_metrics_generic import parallel_metric_2d
 
 
 ##############################
@@ -135,7 +135,7 @@ for iFile, folderPathName in enumerate(datapaths):
             data_range = list(range(nTimes - teWindow + 1))
             data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
             #rez = idtxlParallelCPUMulti(data_lst, idtxlSettings, methods, NCore=NCore)  # {method : [nRange, 3, nChannel, nChannel] }
-            rez = fc_parallel_multiparam(data_lst, 'idtxl', methods, idtxlSettings, nCore=NCore)
+            rez = parallel_metric_2d(data_lst, 'idtxl', methods, idtxlSettings, nCore=NCore)
 
             for methodName, methodRez in rez.items():
                 te_data = np.full((3, nChannels, nChannels, nTimes), np.nan)

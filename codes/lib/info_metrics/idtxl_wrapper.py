@@ -38,11 +38,6 @@ def get_analysis_class(methodname):
         raise ValueError("Unexpected method", methodname)
 
 
-# Convert data to IDTxl format
-def preprocess_data(data, settings):
-    return Data(data, dim_order=settings['dim_order'])
-
-
 # Convert results structure into set of matrices for better usability
 # Returns shape [3 x nSource] for one given target
 def parse_single_target(resultClass, nNode, iTrg, method):
@@ -93,14 +88,17 @@ def parse_results(results, nNode, method):
 #@jpype_sync_thread
 @redirect_stdout
 def analyse_single_target(iTrg, method, data, settings):
+    # Convert data to IDTxl Format
+    dataIDTxl = Data(data, dim_order=settings['dim_order'])
+
     # Get number of nodes
     # idxNodeShape = settings['dim_order'].index("p")
     # nNode = data.shape[idxNodeShape]
-    nNode = data.n_processes
+    nNode = dataIDTxl.n_processes
 
     # Perform analysis
     analysisClass = get_analysis_class(method)
-    resultClass = analysisClass.analyse_single_target(settings=settings, data=data, target=iTrg)
+    resultClass = analysisClass.analyse_single_target(settings=settings, data=dataIDTxl, target=iTrg)
 
     # Parse results and return them
     return parse_single_target(resultClass, nNode, iTrg, method)
@@ -111,13 +109,16 @@ def analyse_single_target(iTrg, method, data, settings):
 #@jpype_sync_thread
 @redirect_stdout
 def analyse_network(method, data, settings):
+    # Convert data to IDTxl Format
+    dataIDTxl = Data(data, dim_order=settings['dim_order'])
+
     # idxNodeShape = settings['dim_order'].index("p")
     # nNode = data.shape[idxNodeShape]
-    nNode = data.n_processes
+    nNode = dataIDTxl.n_processes
 
     # Perform analysis
     analysisClass = get_analysis_class(method)
-    resultClass = analysisClass.analyse_network(settings=settings, data=data)
+    resultClass = analysisClass.analyse_network(settings=settings, data=dataIDTxl)
 
     # Parse results and return them
     return parse_results(resultClass, nNode, method)

@@ -5,7 +5,7 @@ import pandas as pd
 
 from codes.lib.aux_functions import merge_dicts
 from codes.lib.signal_lib import resample
-from codes.lib.fc.fc_generic import fc_parallel_multiparam
+from codes.lib.info_metrics.info_metrics_generic import parallel_metric_2d
 from codes.lib.analysis.simulated_file_io import write_fc_h5
 from codes.lib.models.false_negative_boost import makedata_snr_observational, makedata_snr_occurence
 
@@ -68,7 +68,7 @@ def reinit_param(param, minlag=None, maxlag=None):
 
 # Shorthand to pass all parameters from dict to method
 def wrapper_multiparam(dataLst, param):
-    return fc_parallel_multiparam(
+    return parallel_metric_2d(
         dataLst,
         param['library'],
         param['methods'],

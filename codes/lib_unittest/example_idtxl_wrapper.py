@@ -9,7 +9,7 @@ rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
 print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
-from codes.lib.fc.fc_generic import fc_parallel_target
+from codes.lib.info_metrics.info_metrics_generic import parallel_metric_2d
 from codes.lib.models.test_lib import dynsys
 
 
@@ -19,7 +19,7 @@ from codes.lib.models.test_lib import dynsys
 
 # DynSys parameters
 dynsysParam = {
-    'nNode'   : 12,    # Number of variables
+    'nNode'   : 4,    # Number of variables
     'nData'   : 4000,  # Number of timesteps
     'nTrial'  : 20,    # Number of trials
     'dt'      : 50,    # ms, timestep
@@ -44,7 +44,12 @@ idtxlParam = {
     'min_lag_sources' : 1
 }
 
-te, lag, p = fc_parallel_target(data.transpose((0, 2, 1))[:, -200:, :], "idtxl", 'BivariateTE', idtxlParam, serial=False, nCore=None)
+dataEff = data.transpose((0, 2, 1))[:, -200:, :]
+
+print(dataEff.shape)
+
+rezDict = parallel_metric_2d([dataEff], "idtxl", ['BivariateTE'], idtxlParam, parTarget=True, serial=False, nCore=None)
+te, lag, p = rezDict['BivariateTE'][0]
 
 fig, ax = plt.subplots(ncols=3)
 ax[0].imshow(te)

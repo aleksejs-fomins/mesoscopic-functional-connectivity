@@ -11,7 +11,7 @@ print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 # import special libraries
-from codes.lib.fc.corr_lib import crossCorr
+from codes.lib.info_metrics.corr_lib import crossCorr
 from codes.lib.plots.matrix import plotMatrix
 
 '''

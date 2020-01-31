@@ -10,7 +10,7 @@ rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
 print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
-from codes.lib.fc.fc_generic import fc_parallel
+from codes.lib.info_metrics.info_metrics_generic import fc_parallel
 
 
 # IDTxl parameters

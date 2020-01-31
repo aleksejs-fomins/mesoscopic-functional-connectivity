@@ -15,3 +15,13 @@ def filter_rows_colvals(df, coldict):
     query = ' and '.join([colname+'=='+strwrap(val) for colname, val in coldict.items()])
     return df.query(query)
 
+
+def get_one_row(rows):
+    nRows = rows.shape[0]
+    if nRows == 0:
+        return None, None
+    elif nRows > 1:
+        raise ValueError("Expected 1 match, got", nRows)
+
+    for idx, row in rows.iterrows():
+        return idx, row

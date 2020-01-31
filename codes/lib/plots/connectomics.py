@@ -1,9 +1,8 @@
-import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict
 
-from codes.lib.metrics import graph_lib
+from codes.lib.aux_functions import slice_sorted
+from codes.lib.stat import graph_lib
 from codes.lib.signal_lib import resample, resample_shortest_linear
 
 
@@ -24,12 +23,17 @@ def _get_binary_metric_dict():
         #         'out degree'              : graph_lib.degree_out,
         #         'total degree'            : graph_lib.degree_tot,
         #         'reciprocal degree'       : graph_lib.degree_rec,
-        'cc-total-normalized'       : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=True)),
-        'cc-total-unnormalized'     : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=False)),
+        'cc-total-normalized'       : lambda M: np.mean(
+            graph_lib.clustering_coefficient(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized'     : lambda M: np.mean(
+            graph_lib.clustering_coefficient(M, kind='tot', normDegree=False)),
         'cc-in-normalized'          : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=True)),
-        'cc-in-unnormalized'        : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=False)),
-        'cc-out-normalized'         : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
-        'cc-out-unnormalized'       : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
+        'cc-in-unnormalized'        : lambda M: np.mean(
+            graph_lib.clustering_coefficient(M, kind='in', normDegree=False)),
+        'cc-out-normalized'         : lambda M: np.mean(
+            graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'       : lambda M: np.mean(
+            graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
     }
 
 
@@ -211,32 +215,32 @@ def plot_fc_mag_vs_days(outname, timesLst, dataLst, dataLabelLst, rangeLabelLst,
     plt.close()
 
 
-def plot_te_nconn_rangebydays(outname, timesLst, dataLst, dataLabelLst, rangeLabelLst, pTHR):
-    nFiles = len(dataLabelLst)
-
-    fig, ax = plt.subplots(figsize=(10, 10))
-    for rangeLabel, dataRangeLst in zip(rangeLabelLst, dataLst):
-        atLeast1ConnPerSession = []
-        for idxFile, data in enumerate(dataLst):
-            binaryConnMatRng = _get_binary_conn(data, pTHR)
-            atLeast1ConnPerSession += [(np.sum(binaryConnMatRng, axis=2) > 0).astype(int)]
-
-        nConnPerSession = [np.sum(c) for c in atLeast1ConnPerSession]
-        sharedConn      = [np.nan] + [np.sum(atLeast1ConnPerSession[idxFile-1] + atLeast1ConnPerSession[idxFile] == 2) for idxFile in range(1, nFiles)]
-
-        #TODO - extrapolate
-        #have_bte = "BivariateTE" in outname
-        #plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance')
-        ax.plot(nConnPerSession, label=rangeLabel+'_total')
-        ax.plot(sharedConn, '--', label=rangeLabel+'_shared')
-    
-    nChannel = dataLst[0][0].shape[0]
-    ax.set_ylim(0, nChannel*(nChannel-1))
-    ax.set_xticks(list(range(nFiles)))
-    ax.set_xticklabels([label[12:17] for label in dataLabelLst])
-    ax.legend()
-    plt.savefig(outname)
-    plt.close()
+# def plot_te_nconn_rangebydays(outname, timesLst, dataLst, dataLabelLst, rangeLabelLst, pTHR):
+#     nFiles = len(dataLabelLst)
+#
+#     fig, ax = plt.subplots(figsize=(10, 10))
+#     for rangeLabel, dataRangeLst in zip(rangeLabelLst, dataLst):
+#         atLeast1ConnPerSession = []
+#         for idxFile, data in enumerate(dataLst):
+#             binaryConnMatRng = _get_binary_conn(data, pTHR)
+#             atLeast1ConnPerSession += [(np.sum(binaryConnMatRng, axis=2) > 0).astype(int)]
+#
+#         nConnPerSession = [np.sum(c) for c in atLeast1ConnPerSession]
+#         sharedConn      = [np.nan] + [np.sum(atLeast1ConnPerSession[idxFile-1] + atLeast1ConnPerSession[idxFile] == 2) for idxFile in range(1, nFiles)]
+#
+#         #TODO - extrapolate
+#         #have_bte = "BivariateTE" in outname
+#         #plt.axhline(y=4.0 if have_bte else 1.0, linestyle="--", label='chance')
+#         ax.plot(nConnPerSession, label=rangeLabel+'_total')
+#         ax.plot(sharedConn, '--', label=rangeLabel+'_shared')
+#
+#     nChannel = dataLst[0][0].shape[0]
+#     ax.set_ylim(0, nChannel*(nChannel-1))
+#     ax.set_xticks(list(range(nFiles)))
+#     ax.set_xticklabels([label[12:17] for label in dataLabelLst])
+#     ax.legend()
+#     plt.savefig(outname)
+#     plt.close()
     
     
 def plot_fc_binary_avg_vs_time(outname, timesLst, dataLst, dataLabelLst, rangeLabelLst, pTHR):
@@ -310,30 +314,30 @@ def plot_fc_vs_performance(outname, timesLst, dataLst, dataLabelLst, rangesSec, 
     plt.close()
     
 
-def plot_te_distribution_rangebydays(outname, timesLst, dataLst, dataLabelLst, rangesSec, pTHR, timestep):
-    fig, ax = plt.subplots(figsize=(10, 10))
-
-    nFiles = len(dataLst)
-    for rangeName, rangeSeconds in rangesSec.items():
-        rng_min = int(rangeSeconds[0] / timestep)
-        rng_max = int(rangeSeconds[1] / timestep)
-    
-        meanTEByDay = []
-        for idxFile, (data, label) in enumerate(zip(dataLst, dataLabelLst)):
-            te, lag, p = data
-            pRng = p[:,:,rng_min:rng_max]
-            te_rng = te[:,:,rng_min:rng_max]
-            idx_conn = graph_lib.is_conn(pRng, pTHR)
-            meanTEByDay += [np.mean(te_rng[idx_conn.astype(bool)])]
-
-        #TODO - extrapolate
-        ax.plot(meanTEByDay, label=rangeName)
-    
-    ax.set_xticks(list(range(nFiles)))
-    ax.set_xticklabels([label[12:17] for label in dataLabelLst])
-    ax.legend()
-    plt.savefig(outname)
-    plt.close()
+# def plot_te_distribution_rangebydays(outname, timesLst, dataLst, dataLabelLst, rangesSec, pTHR, timestep):
+#     fig, ax = plt.subplots(figsize=(10, 10))
+#
+#     nFiles = len(dataLst)
+#     for rangeName, rangeSeconds in rangesSec.items():
+#         rng_min = int(rangeSeconds[0] / timestep)
+#         rng_max = int(rangeSeconds[1] / timestep)
+#
+#         meanTEByDay = []
+#         for idxFile, (data, label) in enumerate(zip(dataLst, dataLabelLst)):
+#             te, lag, p = data
+#             pRng = p[:,:,rng_min:rng_max]
+#             te_rng = te[:,:,rng_min:rng_max]
+#             idx_conn = graph_lib.is_conn(pRng, pTHR)
+#             meanTEByDay += [np.mean(te_rng[idx_conn.astype(bool)])]
+#
+#         #TODO - extrapolate
+#         ax.plot(meanTEByDay, label=rangeName)
+#
+#     ax.set_xticks(list(range(nFiles)))
+#     ax.set_xticklabels([label[12:17] for label in dataLabelLst])
+#     ax.legend()
+#     plt.savefig(outname)
+#     plt.close()
 
 
 

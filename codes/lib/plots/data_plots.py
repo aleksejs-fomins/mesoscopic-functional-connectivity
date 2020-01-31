@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from codes.lib.fc.corr_lib import corr, crossCorr
-from codes.lib.metrics import graph_lib
+from codes.lib.info_metrics.corr_lib import corr, crossCorr
+from codes.lib.stat import graph_lib
 
 
 def plot_mean_variance_activity_by_learning(dataDB):

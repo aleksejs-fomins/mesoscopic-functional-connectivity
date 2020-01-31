@@ -3,7 +3,7 @@ import numpy as np
 
 # Load user libraries
 from codes.lib.signal_lib import approx_decay_conv, resample_kernel
-from codes.lib.metrics.graph_lib import setDiagU
+from codes.lib.stat.graph_lib import setDiagU
 
 
 # Convert discretized interval to number of steps

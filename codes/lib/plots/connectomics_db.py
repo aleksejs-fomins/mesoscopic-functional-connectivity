@@ -7,9 +7,9 @@ import seaborn as sns
 from statannot import add_stat_annotation
 
 #from codes.lib.plots.matplotblib_lib import bins_multi
+from codes.lib.pandas_lib import get_one_row
 from codes.lib.plots import connectomics
-from codes.lib.metrics import graph_lib
-from codes.lib.stat.stat_lib import bootstrap_resample_function
+from codes.lib.stat import graph_lib
 from codes.lib.stat.stat_shared import log_pval_H0_shared_random
 
 
@@ -20,7 +20,6 @@ def plot_generic(dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ext='.svg'):
         "connectivity_fc_vs_time"            : connectomics.plot_fc_mag_vs_time,
         "connectivity_fc_vs_days"            : connectomics.plot_fc_mag_vs_days,
         "connectivity_avgnconn_vs_days"      : connectomics.plot_fc_binary_avg_vs_time,
-        "connectivity_nconn_shared_avg"      : connectomics.plot_fc_binary_shared_avg,
         "connectivity_fc_vs_performance"     : connectomics.plot_fc_vs_performance
     }
 
@@ -33,37 +32,51 @@ def plot_generic(dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ext='.svg'):
         str(dataDB.summaryTE["window"])]
     )
 
-    for sweepDict, rows in dataDB.mouse_iterator():
-        sweepSuffix = '_'.join(sweepDict.values())
+    for dictSweep, rowsSweep in dataDB.mouse_iterator():
+        sweepSuffix = '_'.join(dictSweep.values())
         outfname = os.path.join(outpath, '_'.join([plotPrefix, datasetSuffix, sweepSuffix]) + ext)
         print("--", sweepSuffix)
 
-        dataLabels = rows['mousekey']
 
-        timesLst = []
-        dataLst = []
+        def _get_fc_data_rows(rows, rng):
+            timesLst = []
+            dataLst = []
+            for idxFC, rowFC in rows.iterrows():
+                times, data = dataDB.get_fc_data(idxFC, rng)
+                timesLst += [times]
+                dataLst += [data]
+            return timesLst, dataLst
+
+
+        timesLstLst = []
+        dataLstLst = []
         if rangesSec is None:
             rangeLabels = ["alltimes"]
-            times, data = dataDB.get_fc_data(rows, rangesSec)
-            timesLst += [times]
-            dataLst += [data]
+            timesLst, dataLst = _get_fc_data_rows(rowsSweep, None)
+            timesLst += [timesLst]
+            dataLst += [dataLst]
         else:
             rangeLabels = list(rangesSec.keys())
             for rng in rangesSec.values():
-                times, data = dataDB.get_fc_data(rows, rng)
-                timesLst += [times]
-                dataLst += [data]
+                timesLst, dataLst = _get_fc_data_rows(rowsSweep, rng)
+                timesLstLst += [timesLst]
+                dataLstLst += [dataLst]
 
-        plotFunc(outfname, timesLst, dataLst, dataLabels, rangeLabels, pTHR)
+        dataLabels = rowsSweep['mousekey']
+        plotFunc(outfname, timesLstLst, dataLstLst, dataLabels, rangeLabels, pTHR)
 
 
-def plot_fc_vs_performance(dataDB, pTHR, outname=None, show=True):
+# FIXME: Standardize rangesSec to dict
+def plot_fc_vs_performance(dataDB, pTHR, rangesSec=None, outname=None, show=True):
     '''
        Scatter nConn,TE vs Performance + expertLine
        2xBin mean(nConn), mean(TE) naive&expert + (* from wilcoxon rank-sum)
        Scatter nConn, TE vs nTrial
        Test if nTrial fully explains prev plot
     '''
+
+    if rangesSec is not None:
+        rangesSec = list(rangesSec.values())[0]
 
     rezDict = {
         "trial" : [],
@@ -73,29 +86,26 @@ def plot_fc_vs_performance(dataDB, pTHR, outname=None, show=True):
         "mean nConnConf" : []
     }
 
-    perfLst = defaultdict(list)
-    meanTE = defaultdict(list)
-    meanNConnConf = defaultdict(list)
+    # perfLst = defaultdict(list)
+    # meanTE = defaultdict(list)
+    # meanNConnConf = defaultdict(list)
 
-    for idx, row in dataDB.metaDataFrames['TE'].iterrows():
+    for idxFC, rowFC in dataDB.metaDataFrames['TE'].iterrows():
         # Extract parameters from dataframe
-        trial = row['trial']
-        method = row['method']
-        mousekey = row['mousekey']
+        trial = rowFC['trial']
+        method = rowFC['method']
+        mousekey = rowFC['mousekey']
 
         # Find corresponding data file, extract performance
-        dataRowsFiltered = dataDB.get_rows('neuro', {'mousekey' : mousekey})
-        nRows = dataRowsFiltered.shape[0]
-        if nRows == 0:
-            print("Warning:", mousekey, "does not have an associated data entry, skipping")
-        elif nRows > 1:
-            print("Warning: have", len(dataRowsFiltered), "original matches for TE data", mousekey)
-            raise ValueError("Unexpected")
-        else:
-            idxData = dataRowsFiltered.index[0]
+        idxData, rowData = get_one_row(dataDB.get_rows('neuro', {'mousekey': mousekey}))
 
+        if rowData is None:
+            print("Warning:", mousekey, "does not have an associated data entry, skipping")
+        else:
             # Compute mean TE and connection frequency
-            te, lag, p = dataDB.dataTEFC[idx]
+            times, data = dataDB.get_fc_data(idxFC, rangesSec)
+
+            te, lag, p = data
 
             teOffDiag = graph_lib.offdiag_1D(te)
             pOffDiag = graph_lib.offdiag_1D(p)
@@ -159,10 +169,12 @@ def plot_fc_vs_performance(dataDB, pTHR, outname=None, show=True):
         plt.show()
 
 
-def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec, outname=None, show=True):
-    FPS = 20
-    RANGE_STEP = (int(FPS * rangesSec[0]), int(FPS * rangesSec[1]))
+
+# FIXME: Standardize rangesSec to dict
+def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, outname=None, show=True):
     nMethod = len(dataDB.summaryTE['method'])
+    if rangesSec is not None:
+        rangesSec = list(rangesSec.values())[0]
 
     ##############################
     # Part 1:
@@ -181,46 +193,39 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec, outname=N
 
     for method in dataDB.summaryTE['method'].keys():
         for mousename in dataDB.mice:
-            mouseRows = dataDB.get_rows('TE', {'mousename': mousename})
+            nChannelMouse = dataDB.get_nchannels(mousename)
+            mouseRows = dataDB.get_rows('TE', {'mousename': mousename, 'method' : method})
 
             isConnAnyRngLst = []
             nConnAnyRng = []
             perfSharedThis = []
 
-            for idx, row in mouseRows.iterrows():
-                mousekey = row['mousekey']
-                methodThis = row['method']
+            for idxFC, rowFC in mouseRows.iterrows():
+                mousekey = rowFC['mousekey']
 
-                if methodThis == method:
-                    # Find corresponding data file, extract performance
-                    dataRowsFiltered = dataDB.get_rows('neuro', {'mousekey': mousekey})
-                    nRows = dataRowsFiltered.shape[0]
-                    if nRows == 0:
-                        print("Warning:", mousekey, "does not have an associated data entry, skipping")
-                    elif nRows > 1:
-                        print("Warning: have", len(dataRowsFiltered), "original matches for TE data", mousekey)
-                        raise ValueError("Unexpected")
-                    else:
+                # Find corresponding data file, extract performance
+                idxData, rowData = get_one_row(dataDB.get_rows('neuro', {'mousekey': mousekey}))
 
-                        thisMouseDataIdxs = dataRowsFiltered.index
-                        perf = dataDB.dataPerformance[thisMouseDataIdxs]
-                        perfSharedThis += [perf]
+                if rowData is None:
+                    print("Warning:", mousekey, "does not have an associated data entry, skipping")
+                else:
+                    times, data = dataDB.get_fc_data(idxFC, rangeSec=rangesSec)
 
-                        # Compute mean TE and connection frequency
-                        te, lag, p = dataDB.dataTEFC[idx]
-                        pRng = p[..., RANGE_STEP[0]: RANGE_STEP[1]]
+                    pThis = data[2]
 
-                        nChannel = p.shape[1]
-                        isConnRng = graph_lib.is_conn(pRng, pTHR)
-                        isConnAnyRngLst += [np.any(isConnRng, axis=2)]
-                        nConnAnyRng += [np.sum(isConnAnyRngLst[-1])]
+                    perf = dataDB.dataPerformance[idxData]
+                    perfSharedThis += [perf]
+
+                    isConnRng = graph_lib.is_conn(pThis, pTHR)
+                    isConnAnyRngLst += [np.any(isConnRng, axis=2)]
+                    nConnAnyRng += [np.sum(isConnAnyRngLst[-1])]
 
             for i in range(1, len(isConnAnyRngLst)):
                 sharedConnDict['method'] += [method]
-                sharedConnDict['nConnTot'] += [nChannel * (nChannel - 1)]
+                sharedConnDict['nConnTot'] += [nChannelMouse * (nChannelMouse - 1)]
                 sharedConnDict['nConnPre'] += [nConnAnyRng[i - 1]]
                 sharedConnDict['nConnPost'] += [nConnAnyRng[i]]
-                sharedConnDict['nConnShared'] += [np.sum(nConnAnyRng[i - 1] & nConnAnyRng[i])]
+                sharedConnDict['nConnShared'] += [np.sum(isConnAnyRngLst[i - 1] & isConnAnyRngLst[i])]
                 sharedConnDict['Performance'] += [perfSharedThis[i]]
 
     sharedConnDF = pd.DataFrame(sharedConnDict)

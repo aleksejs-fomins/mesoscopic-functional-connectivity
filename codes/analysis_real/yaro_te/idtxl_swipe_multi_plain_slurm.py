@@ -18,7 +18,7 @@ print("Appended root directory", rootpath)
 # User libraries
 from codes.lib.aux_functions import mem_now_as_str
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
-from codes.lib.fc.fc_generic import fc_single_target
+from codes.lib.info_metrics.info_metrics_generic import fc_single_target
 
 ##############################
 #  Paths

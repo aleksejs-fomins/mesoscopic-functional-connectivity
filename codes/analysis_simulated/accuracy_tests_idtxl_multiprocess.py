@@ -48,15 +48,15 @@ data_gen = sweep_data_generator(fileInfoDf, dataFileNames, fileParams['analysis'
 for sweepKey, dataLst, trueConnLst in data_gen:
     fc_accuracy_analysis.analysis_width_depth(dataLst, trueConnLst, sweepKey + '.h5', param)
 
-# #############################
-# # SNR Tests
-# #############################
-# nStep = 40  # Number of different data sizes to pick
-# data_gen = sweep_data_generator(fileInfoDf, dataFileNames, ['typical'], ['dynsys'], fileParams['nNode'])
-#
-# for sweepKey, dataLst, trueConnLst in data_gen:
-#     assert len(dataLst) == 1, "Criteria expected to match only one file at a time"
-#     fc_accuracy_analysis.analysis_snr(dataLst[0], trueConnLst[0], nStep, sweepKey + '.h5', param)
+#############################
+# SNR Tests
+#############################
+nStep = 40  # Number of different data sizes to pick
+data_gen = sweep_data_generator(fileInfoDf, dataFileNames, ['typical'], ['dynsys'], fileParams['nNode'])
+
+for sweepKey, dataLst, trueConnLst in data_gen:
+    assert len(dataLst) == 1, "Criteria expected to match only one file at a time"
+    fc_accuracy_analysis.analysis_snr(dataLst[0], trueConnLst[0], nStep, sweepKey + '.h5', param)
 
 ################
 # Window

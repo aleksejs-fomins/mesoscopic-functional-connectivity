@@ -3,12 +3,11 @@
 ###############################
 import os, sys, locale
 import json
-import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch
 
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
@@ -41,7 +40,7 @@ from codes.lib.data_io.os_lib import getfiles_walk
 from codes.lib.data_io.matlab_lib import loadmat
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf, readTE_H5, parse_TE_folder
 
-import codes.lib.metrics.graph_lib as graph_lib
+import codes.lib.stat.graph_lib as graph_lib
 
 
 '''

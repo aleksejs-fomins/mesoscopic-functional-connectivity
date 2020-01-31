@@ -1,7 +1,5 @@
 import numpy as np
 
-from codes.lib.metrics.graph_lib import offdiag_idx
-
 
 # Given number of elements in a subset and total set, return their ratio
 # If both are zero, return zero

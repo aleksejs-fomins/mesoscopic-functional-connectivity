@@ -21,6 +21,14 @@ class GenericMapper():
 
     def map(self, f, x):
         print("----Root process", self.pid, "started task on", self.nCore, "cores----")
-        rez = list(map(f, x)) if self.serial else self.pool.map(f, x)
+        if self.serial:
+            rez = list(map(f, x))
+        else:
+            rez = self.pool.map(f, x)
         print("----Root process", self.pid, "finished task")
         return rez
+
+    def mapMultiArg(self, f, x):
+        # Ugly intermediate function to unpack tuple
+        f_proxy = lambda task: f(*task)
+        return self.map(f_proxy, x)

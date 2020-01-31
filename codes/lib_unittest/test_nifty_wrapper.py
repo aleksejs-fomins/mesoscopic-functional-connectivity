@@ -14,7 +14,7 @@ sys.path.append(rootpath)
 
 # Load user libraries
 from codes.lib.signal_lib import approx_decay_conv
-from codes.lib.fc.te_nifty_wrapper.nifty_wrapper import nifty_wrapper
+from codes.lib.info_metrics.te_nifty_wrapper.nifty_wrapper import nifty_wrapper
 
 ########################
 ## Generate input data

@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 import itertools
 
-from os.path import basename, dirname, join, abspath
+from os.path import basename, dirname, join
 
 from codes.lib.aux_functions import bin_data_by_keys, strlst2date, slice_sorted
-from codes.lib.metrics.mouse_performance import mouse_performance_allsessions
+from codes.lib.data_io.yaro.mouse_performance import mouse_performance_allsessions
 from codes.lib.pandas_lib import filter_rows_colval, filter_rows_colvals
+from codes.lib.data_io.matlab_lib import loadmat
 from codes.lib.data_io.os_lib import getfiles_walk
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf, read_paw, read_lick, read_whisk, readTE_H5, parse_TE_folder
 from codes.lib.data_io.yaro.yaro_behaviour_preprocess import resample_lick, resample_paw, resample_whisk
@@ -125,11 +126,11 @@ class DataFCDatabase :
     # The channel labels need not be consistent across mice, or even within one mouse
     def _find_parse_channel_labels(self, path):
         labelPaths = getfiles_walk(path, ['channel_labels.mat'])
-        channelData = [[basename(path), join(path, name)] for path, name in labelPaths]
-        channelDict = {k: v for k, v in zip(['mousename', 'path'], np.array(channelData).T)}
-        self.metaDataFrames['channel_labels'] = pd.DataFrame(channelDict)
-        self.mice.update(set(self.metaDataFrames['channel_labels']['mousename']))
+        channelDict = {basename(path) : join(path, name) for path, name in labelPaths}
+        #self.metaDataFrames['channel_labels'] = pd.DataFrame(channelDict, index=['mousename', 'path'])
+        self.channelLabelsDict = {mousename : loadmat(path)['channel_labels'] for mousename, path in channelDict.items()}
 
+        self.mice.update(set(channelDict.keys()))
 
     def _find_parse_neuro_files(self, path):
         dataPaths = getfiles_walk(path, ["data.mat"])
@@ -316,25 +317,27 @@ class DataFCDatabase :
         self.metaDataFrames['neuro']['deltaDaysCentered'] = deltaDaysCentered
 
 
+    def get_channel_labels(self, mousename):
+        return self.channelLabelsDict[mousename]
+
+
+    def get_nchannels(self, mousename):
+        return len(self.channelLabelsDict[mousename])
+
+
     def get_rows(self, frameName, coldict):
         return filter_rows_colvals(self.metaDataFrames[frameName], coldict)
 
 
     # Find FC data for specified rows, then crop to selected time range
-    def get_fc_data(self, rows, rangeSec=None):
-        timesFC = []
-        dataFC = []
-
-        for idx in rows.index:
-            if rangeSec is None:
-                timesFC += [self.dataTEtimes[idx]]
-                dataFC += [self.dataTEFC[idx]]
-            else:
-                rng = slice_sorted(timesFC, rangeSec)
-                timesFC += [self.dataTEtimes[idx][rng[0]:rng[1]]]
-                dataFC += [self.dataTEFC[idx][..., rng[0]:rng[1]]]
-
-        return timesFC, dataFC
+    def get_fc_data(self, idx, rangeSec=None):
+        timesThis = self.dataTEtimes[idx]
+        fcThis = self.dataTEFC[idx]
+        if rangeSec is None:
+            return timesThis, fcThis
+        else:
+            rng = slice_sorted(timesThis, rangeSec)
+            return timesThis[rng[0]:rng[1]], fcThis[..., rng[0]:rng[1]]
 
 
     # Provide rows for all sessions of the same mouse, iterating over combinations of other anaylsis parameters

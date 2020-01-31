@@ -10,7 +10,7 @@ rootpath = os.path.join(thispath[:thispath.index(rootname)], rootname)
 print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
-from codes.lib.fc.fc_generic import fc_parallel
+from codes.lib.info_metrics.info_metrics_generic import parallel_metric_2d
 
 
 # IDTxl parameters
@@ -113,7 +113,7 @@ for dataName in ["Linear", "Circular"]:
 
             for nCore in nCoreArr:
                 tStart = time()
-                rez = fc_parallel(data, library, estimator, paramThis, parTarget=parTarget, serial=False, nCore=nCore)
+                rez = parallel_metric_2d([data], library, [estimator], paramThis, parTarget=parTarget, serial=False, nCore=nCore)
                 timesDict[taskKey] += [time() - tStart]
                 ptests += [taskKey + (nCore, rez[2][0,1])]
 

@@ -20,7 +20,7 @@ from codes.lib.signal_lib import resample
 from codes.lib.data_io.os_lib import getfiles_walk
 from codes.lib.data_io.qt_wrapper import gui_fpath
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
-from codes.lib.fc.fc_generic import fc_parallel_multiparam
+from codes.lib.info_metrics.info_metrics_generic import parallel_metric_2d
 
 
 
@@ -129,7 +129,7 @@ for iFile, (folderName, folderPathName) in enumerate(datapaths.items()):
 
             data_range = list(range(nTimes - teWindow + 1))
             data_lst = [dataEff[:, i:i + teWindow, :] for i in data_range]
-            rez = fc_parallel_multiparam(data_lst, 'idtxl', methods, idtxlSettings, nCore=NCore)
+            rez = parallel_metric_2d(data_lst, 'idtxl', methods, idtxlSettings, nCore=NCore)
 
 
             for methodName, methodRez in rez.items():
