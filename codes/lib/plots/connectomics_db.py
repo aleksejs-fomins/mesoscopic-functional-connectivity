@@ -246,16 +246,19 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, tria
     fig, ax = plt.subplots(nrows=2, ncols=nMethod, figsize=(10, 10), tight_layout=True)
     fig.suptitle("P-value of nSharedConn under H0 of random permutation")
 
-    for iMethod, method in enumerate(set(sharedConnDict['method'])):
+    sort_alphabetic = lambda x: np.sort(list(x))
+
+    for iMethod, method in enumerate(sort_alphabetic(set(sharedConnDict['method']))):
         rowsThis = sharedConnDF[sharedConnDF["method"] == method]
 
-        logPvalL, logPvalR = log_pval_H0_shared_random(
+        logPThis, logPvalL, logPvalR = log_pval_H0_shared_random(
             rowsThis['nConnTot'],
             rowsThis['nConnPre'],
             rowsThis['nConnPost'],
             rowsThis['nConnShared'])
 
         rowsThis.insert(0, 'skill', (rowsThis["Performance"] >= 0.7).map(skillMap))
+        rowsThis.insert(0, "Log probability", logPThis)
         rowsThis.insert(0, "Log p-value", np.min([logPvalL, logPvalR], axis=0))
         rowsThis.insert(0, "direction", [nConnDeltaMap[l < r] for l, r in zip(logPvalL, logPvalR)])
 
@@ -300,10 +303,29 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, tria
         # print("* Expert median", np.round(muExpert, 2), "+/-", np.round(stdExpert, 2))
 
 
-    ##############################
-    # Part 3: TODO
-    #   * Sweep performance with
-    ##############################
+        ##############################
+        # Part 3: TODO
+        #   * Sweep performance with
+        ##############################
+
+        window = 0.1
+        nDiscr = 100
+        perfAxis = np.linspace(0, 1, nDiscr)
+        logLikelihood = np.zeros(nDiscr)
+
+        for iPerf, perf in enumerate(perfAxis):
+            rowsThisPerf = rowsThis[(rowsThis['Performance'] > perf - window/2)&(rowsThis['Performance'] < perf + window/2) ]
+            probs = np.array(rowsThisPerf['Log probability'])
+
+            if len(probs) == 0:
+                logLikelihood[iPerf] = np.nan
+            else:
+                logLikelihood[iPerf] = np.mean(probs)
+
+        ax[0][iMethod].plot(perfAxis, logLikelihood, 'r')
+
+
+
 
     if outname is not None:
         plt.savefig(outname)
