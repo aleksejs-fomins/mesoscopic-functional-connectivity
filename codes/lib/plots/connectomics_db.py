@@ -171,7 +171,7 @@ def plot_fc_vs_performance(dataDB, pTHR, rangesSec=None, outname=None, show=True
 
 
 # FIXME: Standardize rangesSec to dict
-def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, outname=None, show=True):
+def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, trial=None, outname=None, show=True):
     nMethod = len(dataDB.summaryTE['method'])
     if rangesSec is not None:
         rangesSec = list(rangesSec.values())[0]
@@ -194,7 +194,11 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, outn
     for method in dataDB.summaryTE['method'].keys():
         for mousename in dataDB.mice:
             nChannelMouse = dataDB.get_nchannels(mousename)
-            mouseRows = dataDB.get_rows('TE', {'mousename': mousename, 'method' : method})
+
+            if trial is None:
+                mouseRows = dataDB.get_rows('TE', {'mousename': mousename, 'method' : method})
+            else:
+                mouseRows = dataDB.get_rows('TE', {'mousename': mousename, 'method': method, 'trial': trial})
 
             isConnAnyRngLst = []
             nConnAnyRng = []
