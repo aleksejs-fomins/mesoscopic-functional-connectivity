@@ -69,6 +69,7 @@ def resample_kernel(x1, x2, sig2):
     xx2 = np.outer(np.ones(n2), x1)
     W = gaussian(xx2 - xx1, sig2)
 
+    # Normalize weights, so they sum up to 1 for every target point
     for i in range(n2):
         W[i] /= np.sum(W[i])
 

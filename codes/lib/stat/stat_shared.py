@@ -74,15 +74,18 @@ def log_prob_binary_shared(n, nX, nY):
 
 
 def log_pval_H0_shared_random(nTotLst, nSrcLst, nTrgLst, nSharedTrueLst):
+    rezThis = []
     rezL = []
     rezR = []
     for nTot, nSrc, nTrg, nShTrue in zip(nTotLst, nSrcLst, nTrgLst, nSharedTrueLst):
         logProb = log_prob_binary_shared(nTot, nSrc, nTrg)
-        logPValL = logexpsum(logProb[:nShTrue+1])  # Log Prob of getting at least as few as nSh
-        logPValR = logexpsum(logProb[nShTrue:])    # Log Prob of getting at least as few as nSh
+        logPThis = logProb[nShTrue]                # Log Prob of getting exactly nSh
+        logPValL = logexpsum(logProb[:nShTrue+1])  # Log Prob of getting at most nSh
+        logPValR = logexpsum(logProb[nShTrue:])    # Log Prob of getting at least nSh
+        rezThis += [logPThis]
         rezL += [logPValL]
         rezR += [logPValR]
-    return np.array(rezL), np.array(rezR)
+    return np.array(rezThis), np.array(rezL), np.array(rezR)
 
 
 
