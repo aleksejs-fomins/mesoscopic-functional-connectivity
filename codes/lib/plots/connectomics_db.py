@@ -11,6 +11,7 @@ from codes.lib.pandas_lib import get_one_row
 from codes.lib.plots import connectomics
 from codes.lib.stat import graph_lib
 from codes.lib.stat.stat_shared import log_pval_H0_shared_random
+from codes.lib.signal_lib import resample
 
 
 def plot_generic(dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ext='.svg'):
@@ -171,7 +172,7 @@ def plot_fc_vs_performance(dataDB, pTHR, rangesSec=None, outname=None, show=True
 
 
 # FIXME: Standardize rangesSec to dict
-def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, trial=None, outname=None, show=True):
+def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, trial=None, filter12=False, outname=None, show=True):
     nMethod = len(dataDB.summaryTE['method'])
     if rangesSec is not None:
         rangesSec = list(rangesSec.values())[0]
@@ -194,6 +195,10 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, tria
     for method in dataDB.summaryTE['method'].keys():
         for mousename in dataDB.mice:
             nChannelMouse = dataDB.get_nchannels(mousename)
+            if filter12:
+                nChannelEff = 12
+            else:
+                nChannelEff = nChannelMouse
 
             if trial is None:
                 mouseRows = dataDB.get_rows('TE', {'mousename': mousename, 'method' : method})
@@ -215,7 +220,14 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, tria
                 else:
                     times, data = dataDB.get_fc_data(idxFC, rangeSec=rangesSec)
 
-                    pThis = data[2]
+                    if filter12 and nChannelMouse != 12:
+                        filter = np.array([26, 31, 30, 25, 34, 46, 44, 47, 15, 48, 33, 35]) - 1
+                        dataEff = data[:, filter]
+                        dataEff = dataEff[:, :, filter]
+                    else:
+                        dataEff = data
+
+                    pThis = dataEff[2]
 
                     perf = dataDB.dataPerformance[idxData]
                     perfSharedThis += [perf]
@@ -226,7 +238,7 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, tria
 
             for i in range(1, len(isConnAnyRngLst)):
                 sharedConnDict['method'] += [method]
-                sharedConnDict['nConnTot'] += [nChannelMouse * (nChannelMouse - 1)]
+                sharedConnDict['nConnTot'] += [nChannelEff * (nChannelEff - 1)]
                 sharedConnDict['nConnPre'] += [nConnAnyRng[i - 1]]
                 sharedConnDict['nConnPost'] += [nConnAnyRng[i]]
                 sharedConnDict['nConnShared'] += [np.sum(isConnAnyRngLst[i - 1] & isConnAnyRngLst[i])]
@@ -262,7 +274,9 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, tria
         rowsThis.insert(0, "Log p-value", np.min([logPvalL, logPvalR], axis=0))
         rowsThis.insert(0, "direction", [nConnDeltaMap[l < r] for l, r in zip(logPvalL, logPvalR)])
 
-        sns.scatterplot(ax=ax[0][iMethod], data=rowsThis, x='Performance', y='Log p-value', hue='direction')
+        #nConnMax = np.max(sharedConnDF['nConnTot'])
+
+        sns.scatterplot(ax=ax[0][iMethod], data=rowsThis, x='Performance', y='Log p-value', size=rowsThis['nConnShared'], hue='direction', hue_order=list(nConnDeltaMap.values()))
         sns.violinplot(ax=ax[1][iMethod], data=rowsThis, x='skill', y='Log p-value', cut=0)
 
         # ax[iMetric][0].set_yscale(scaleY)
@@ -304,24 +318,31 @@ def plot_fc_binary_shared_pval_vs_performance(dataDB, pTHR, rangesSec=None, tria
 
 
         ##############################
-        # Part 3: TODO
-        #   * Sweep performance with
+        #  Sweep performance with a window, evaluate log-likelihood
         ##############################
 
-        window = 0.1
-        nDiscr = 100
-        perfAxis = np.linspace(0, 1, nDiscr)
-        logLikelihood = np.zeros(nDiscr)
+        perfThis = np.array(list(rowsThis['Performance']))
+        probThis = np.array(list(rowsThis['Log probability']))
+        perfAxis = np.linspace(np.min(perfThis), np.max(perfThis), 100)
 
-        for iPerf, perf in enumerate(perfAxis):
-            rowsThisPerf = rowsThis[(rowsThis['Performance'] > perf - window/2)&(rowsThis['Performance'] < perf + window/2) ]
-            probs = np.array(rowsThisPerf['Log probability'])
+        logLikelihood = resample(perfThis, probThis, perfAxis, {"method" : "kernel", "kind" : "gaussian", "ker_sig2" : 0.001})
 
-            if len(probs) == 0:
-                logLikelihood[iPerf] = np.nan
-            else:
-                logLikelihood[iPerf] = np.mean(probs)
+        # window = 0.1
+        # nDiscr = 100
+        # perfAxis = np.linspace(0, 1, nDiscr)
+        # logLikelihood = np.zeros(nDiscr)
+        #
+        # for iPerf, perf in enumerate(perfAxis):
+        #     rowsThisPerf = rowsThis[(rowsThis['Performance'] > perf - window/2)&(rowsThis['Performance'] < perf + window/2) ]
+        #     probs = np.array(rowsThisPerf['Log probability'])
+        #
+        #     if len(probs) == 0:
+        #         logLikelihood[iPerf] = np.nan
+        #     else:
+        #         logLikelihood[iPerf] = np.mean(probs)
 
+        ax[0][iMethod].axhline(y=-2, color='gray', linestyle='--')
+        ax[1][iMethod].axhline(y=-2, color='gray', linestyle='--')
         ax[0][iMethod].plot(perfAxis, logLikelihood, 'r')
 
 
