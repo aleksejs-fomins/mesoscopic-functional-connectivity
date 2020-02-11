@@ -1,4 +1,5 @@
 import numpy as np
+from copy import copy
 
 '''
 The following functions provide iterators over slices of a dataset
@@ -8,6 +9,14 @@ Modifiers:
     * window_pooled  - (True) Time-points within a window are pooled together   (False) Multidimensional over window points
     * time_pooled    - (True) All windows from sweep are pooled together        (False) Sweep over windows
 '''
+
+# Add extra dimensions of size 1 to array at given locations
+def numpy_reshape_extradim(x, reducedAxis):
+    newShape = list(x.shape)
+    for axis in reducedAxis:
+        newShape.insert(axis, 1)
+    return x.reshape(tuple(newShape))
+
 
 class DataSweep:
     def __init__(self, data, settings, nSweepMax=None):
@@ -33,42 +42,47 @@ class DataSweep:
 
 
 class Sweep1D:
-    def __init__(self, dataIter, methods, dimOrder, parSrc):
-        self.methods = methods
-        self.dimOrder = dimOrder
-        self.dataIter = dataIter
-        self.parSrc = parSrc
+    def __init__(self, dataIter, methods, dimOrder, parCh, nCh):
+        self.methods = methods    # Methods to sweep over
+        self.dimOrder = dimOrder  # Dimension order of the data
+        self.dataIter = dataIter  # Iterator to generate data
+        self.nCh = nCh            # Number of channels
+        self.parCh = parCh        # Whether to parallelize over channels
 
     def iterator(self):
         for data in self.dataIter:
-            for method in self.methods:
-                if self.parSrc:
-                    axisProcesses = self.dimOrder.index("p")      # Index of Processes dimension in data
-                    nProcesses = data.shape[axisProcesses]
+            axisProcesses = self.dimOrder.index("p")  # Index of Processes dimension in data
+            nProcesses = data.shape[axisProcesses]
 
+            for method in self.methods:
+                if self.parCh:
                     for iSrc in range(nProcesses):
-                        yield method, data[iSrc]
+                        x = np.take(data, iSrc, axis=axisProcesses)  # Select this channel
+                        yield method, numpy_reshape_extradim(x, [axisProcesses])  # Add dummy channel dimension back
                 else:
                     yield method, data
 
     def unpack(self, rezLst):
         nMethods = len(self.methods)
         rezArr = np.array(rezLst)
-        nComp, _, nSrc = rezArr.shape
 
-        if not self.parSrc:   # [nData * nMethod, 3, nSrc]
+        if not self.parCh:   # rezArr.shape = [nData * nMethod, nRez, nCh]
+            nComp, nRez, nCh = rezArr.shape
+
             nData = nComp // nMethods
 
-            rezArrSplit = rezArr.reshape((nData, nMethods, 3, nSrc))
+            rezArrSplit = rezArr.reshape((nData, nMethods, nRez, nCh))
 
-            # Convert data [nMethod, nData, 3, nSrc] -> {method : [nData, 3, nSrc]} - no transposes needed
+            # Convert data [nMethod, nData, nRez, nCh] -> {method : [nData, nRez, nCh]} - no transposes needed
             return {method : rezArrSplit[:, iMethod] for iMethod, method in enumerate(self.methods)}
-        else:  # [nData * nMethod * nSrc , 3]
-            nData = nComp // (nMethods * nSrc)
+        else:  # rezArr.shape = [nData * nMethod * nCh , nRez]
+            nComp, nRez = rezArr.shape
 
-            rezArrSplit = rezArr.reshape((nData, nMethods, nSrc, 3))
+            nData = nComp // (nMethods * self.nCh)
 
-            # Convert data [nMethod, nData, 3, nSrc] -> {method : [nData, 3, nSrc]}
+            rezArrSplit = rezArr.reshape((nData, nMethods, self.nCh, nRez))
+
+            # Convert data [nMethod, nData, nRez, nCh] -> {method : [nData, nRez, nCh]}
             return {method : rezArrSplit[:, iMethod].transpose((0, 2, 1)) for iMethod, method in enumerate(self.methods)}
 
 
@@ -97,28 +111,26 @@ class Sweep2D:
         nMethods = len(self.methods)
         rezArr = np.array(rezLst)
 
-        if not self.parTarget:   # [nData * nMethod, 3, nSrc, nTrg]
-            nComp, _, nSrc, nTrg = rezArr.shape
+        if not self.parTarget:   # [nData * nMethod, nRez, nSrc, nTrg]
+            nComp, nRez, nSrc, nTrg = rezArr.shape
             nData = nComp // nMethods
             if nComp % nMethods != 0:
                 raise ValueError("Unexpected resulting dimension", nComp, "for nMethods =", nMethods)
 
-            rezArrSplit = rezArr.reshape((nData, nMethods, 3, nSrc, nTrg))
+            rezArrSplit = rezArr.reshape((nData, nMethods, nRez, nSrc, nTrg))
 
-            # Convert data [nData, nMethod, 3, nSrc, nTrg] -> {method : [nData, 3, nSrc, nTrg]} - no transposes needed
+            # Convert data [nData, nMethod, nRez, nSrc, nTrg] -> {method : [nData, nRez, nSrc, nTrg]} - no transposes needed
             return {method : rezArrSplit[:, iMethod] for iMethod, method in enumerate(self.methods)}
-        else:  # [nData * nMethod, nTrg, 3, nSrc]
-            print(rezArr.shape)
-
-            nComp, _, nSrc = rezArr.shape
+        else:  # [nData * nMethod * nTrg, nRez, nSrc]
+            nComp, nRez, nSrc = rezArr.shape
             nTrg = nSrc                          # Currently both are assumed to be equal. We are using different names to make it easier to read which one is a source and which is a target
             nData = nComp // (nMethods * nTrg)
             if nComp % (nMethods * nTrg) != 0:
                 raise ValueError("Unexpected resulting dimension", nComp, "for", nMethods, nTrg)
 
-            rezArrSplit = rezArr.reshape((nData, nMethods, nTrg, 3, nSrc))
+            rezArrSplit = rezArr.reshape((nData, nMethods, nTrg, nRez, nSrc))
 
-            # Convert data [nData, nMethod, nTrg, 3, nSrc] -> {method : [nData, 3, nSrc, nTrg]}
+            # Convert data [nData, nMethod, nTrg, nRez, nSrc] -> {method : [nData, nRez, nSrc, nTrg]}
             return {method : rezArrSplit[:, iMethod].transpose((0, 2, 3, 1)) for iMethod, method in enumerate(self.methods)}
 
 
