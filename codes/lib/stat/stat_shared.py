@@ -5,7 +5,7 @@ under index permutation
 
 import numpy as np
 
-from codes.lib.stat.stat_lib import rand_bool, log_likelihood, discrete_resample, discrete_distr_to_cdf
+from codes.lib.stat.stat_lib import rand_bool_perm, log_likelihood, discrete_resample, discrete_distr_to_cdf
 from codes.lib.stat.comb_lib import log_comb
 
 # Find a probability distribution of the number of entries shared by two binary arrays
@@ -18,8 +18,8 @@ def emp_distr_binary_shared(nSrc, nTrg, nTot, keyTrue=None):
     nStep = 0
     while True:
         nStep += 1
-        srcConnRand = rand_bool(nSrc, nTot)
-        trgConnRand = rand_bool(nTrg, nTot)
+        srcConnRand = rand_bool_perm(nSrc, nTot)
+        trgConnRand = rand_bool_perm(nTrg, nTot)
         nSharedRand = np.sum(srcConnRand & trgConnRand)
 
         distrNew = np.copy(distr)

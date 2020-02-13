@@ -2,7 +2,7 @@ import numpy as np
 import scipy.stats
 
 from codes.lib.aux_functions import perm_map_str
-from codes.lib.stat.stat_lib import bonferroni_correction
+from codes.lib.stat.stat_lib import bonferroni_correction, mu_std
 
 
 def corr_significance(c, nData):
@@ -40,6 +40,22 @@ def corr3D(x3D, y3D=None, est='corr'):
     x2D = x3D.reshape(shape2D)
     y2D = y3D.reshape(shape2D) if y3D is not None else None
     return corr(x2D, y2D, est=est)
+
+
+# Calculates the 1-sided autocorrelation of a discrete 1D dataset
+# Returned dataset has same length as input, first value normalized to 1.
+# TODO: Find better solution for NAN
+def autocorr1D(x):
+    N = len(x)
+
+    # Cheat - replace NAN's with random normal numbers with same mean and variance
+    xEff = np.copy(x)
+    nanIdx = np.isnan(x)
+    xEff[nanIdx] = np.random.normal(*mu_std(x), np.sum(nanIdx))
+
+    #return np.array([np.nanmean(x[iSh:] * x[:N-iSh]) for iSh in range(N)])
+    # Note: As of time of writing np.correlate does not correctly handle nan division
+    return np.correlate(xEff, xEff, 'full')[N - 1:] / N
 
 
 def crossCorr(data, settings, est='corr'):

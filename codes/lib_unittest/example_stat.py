@@ -13,7 +13,7 @@ freqArr = np.zeros(nTot)
 nTrueArr = np.random.randint(0, 100, N_TEST1)
 
 for nTrue in zip(nTrueArr):
-    perm = stat_lib.rand_bool(nTrue, nTot).astype(int)
+    perm = stat_lib.rand_bool_perm(nTrue, nTot).astype(int)
     assert np.sum(perm) == nTrue
     freqArr += perm
 

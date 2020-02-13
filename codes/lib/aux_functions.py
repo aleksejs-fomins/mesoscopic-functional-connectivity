@@ -61,6 +61,22 @@ def perm_map_str(a, b):
     return perm_map_arr(np.array(list(a)), np.array(list(b)))
 
 
+# Return original shape, but replace all axis that have been reduced with ones
+# So final shape looks as if it is of the same dimension as original
+# Useful for broadcasting reduced arrays onto original arrays
+def reshape_reduced_axes(shapeOrig, axisReduced):
+    if axisReduced is None:
+        return (1,)
+    else:
+        if not isinstance(axisReduced, tuple):
+            axisReduced = (axisReduced,)
+
+        shapeNew = list(shapeOrig)
+        for idx in axisReduced:
+            shapeNew[idx] = 1
+        return tuple(shapeNew)
+
+
 # Assign each string to one key out of provided
 # If no keys found, assign special key
 # If more than 1 key found, raise error

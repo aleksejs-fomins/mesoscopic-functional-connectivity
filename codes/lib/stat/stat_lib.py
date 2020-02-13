@@ -2,6 +2,21 @@ import numpy as np
 from bisect import bisect_left
 
 
+def gaussian(mu, s2):
+    return np.exp(- mu**2 / (2 * s2))
+
+# Combined estimate of mean and variance. Excludes nan values
+def mu_std(x, axis=None):
+    return np.nanmean(x, axis=axis), np.nanstd(x, axis=axis)
+
+
+# Computes 1D empirical tolerance interval by determining (1 - sigma)/2 percentile
+def tolerance_interval_1D(x):
+    xNoNan = x[~np.isnan(x)]
+    p = (1 - 0.68) / 2       #  percentile equivalent to 1-sigma gaussian interval
+    return np.percentile(xNoNan, [p, 1-p])
+
+
 # According to Bonferroni, p-value is a multiple of number of hypotheses that have been tested
 # However, p-value may not exceed 1, so crop it to 1. It is probably not precise for large p-values,
 #  but that is also irrelevant, because hypotheses with large p-values would be rejected anyway
@@ -12,7 +27,7 @@ def bonferroni_correction(pMat, nHypothesis):
 
 
 # Construct a 1D random array that has an exact number of ones and zeroes
-def rand_bool(nTrue, nTot):
+def rand_bool_perm(nTrue, nTot):
     rv = np.random.uniform(0, 1, nTot)
     return rv < np.sort(rv)[nTrue]
 

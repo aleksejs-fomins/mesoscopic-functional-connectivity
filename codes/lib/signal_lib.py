@@ -1,13 +1,19 @@
 import numpy as np
-import bisect
 from scipy import interpolate
 
 from codes.lib.aux_functions import slice_sorted
+from codes.lib.stat.stat_lib import gaussian
+from codes.lib.aux_functions import reshape_reduced_axes
 
+# def zscore(x):
+#     return (x - np.nanmean(x)) / np.nanstd(x)
 
-def gaussian(mu, s2):
-    return np.exp(- mu**2 / (2 * s2))
-
+# TODO: TEST ME
+def zscore(x, axis=None):
+    shapeNew = reshape_reduced_axes(x.shape, axis)
+    mu = np.nanmean(x, axis=axis).reshape(shapeNew)
+    std = np.nanstd(x, axis=axis).reshape(shapeNew)
+    return (x - mu) / std
 
 # Compute discretized exponential decay convolution
 # Works with multidimensional arrays, as long as shapes are the same
