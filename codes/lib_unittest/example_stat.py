@@ -58,7 +58,7 @@ emp_pdf = stat_lib.discrete_empirical_pdf_from_sample(resample)
 assert emp_pdf.keys() == pdf.keys()
 
 plt.figure()
-plt.title("Resamling random distribution using " + str(N_TEST3) + " points")
+plt.title("Resamling random distribution using " + str(N_TEST3) + " trials")
 plt.bar(pdf.keys(), pdf.values(), alpha=0.5, label="true")
 plt.bar(emp_pdf.keys(), emp_pdf.values(), alpha=0.5, label="resampled")
 plt.legend()

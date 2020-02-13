@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 
 # Export library path
 rootname = "mesoscopic-functional-connectivity"

@@ -53,7 +53,7 @@ def slice_sorted(data, rng):
 
 # Finds permutation map A->B of elements of two arrays, which are permutations of each other
 def perm_map_arr(a, b):
-    return np.where(a.reshape(a.size, 1) == b)[1]
+    return np.where(b.reshape(b.size, 1) == a)[1]
 
 
 # Same as perm_map_arr, but for string characters
