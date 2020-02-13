@@ -25,8 +25,11 @@ from codes.lib.plots.matrix import plotMatrix
     
 nNode = 5
 nData = 1000
-lagMin = 1
-lagMax = 2
+settings = {
+    'min_lag_sources' : 1,
+    'max_lag_sources' : 2,
+    'dim_order'       : 'ps'
+}
 
 #data = np.random.uniform(0, 1, nNode*nData).reshape((nNode, nData))
 # Generate progressively more random data
@@ -35,8 +38,8 @@ data[0] = np.random.normal(0, 1, nData)
 for i in range(1, nNode):
     data[i] = np.hstack((data[i-1][1:], data[i-1][0]))
 
-rezCorr = crossCorr(data, lagMin, lagMax, est='corr')
-rezSpr = crossCorr(data, lagMin, lagMax, est='spr')
+rezCorr = crossCorr(data, settings, est='corr')
+rezSpr = crossCorr(data, settings, est='spr')
 
 compose = lambda lst1, lst2: [a + "_" + b for a in lst1 for b in lst2]
 
@@ -45,7 +48,7 @@ plotMatrix(
     (2, 3),
     [*rezCorr, *rezSpr],
     np.array(compose(["corr", "spr"], ["val", "lag", "p"])),
-    lims = [[-1, 1], [0, lagMax], [0, 1]]*2,
+    lims = [[-1, 1], [0, settings['max_lag_sources']], [0, 1]]*2,
     draw = True
 )
 
@@ -60,23 +63,26 @@ plotMatrix(
 
 nNode = 5
 nData = 1000
-lagMin = 0
-lagMax = 0
+settings = {
+    'min_lag_sources' : 0,
+    'max_lag_sources' : 0,
+    'dim_order'       : 'ps'
+}
 alpha = 0.5
 
-data = np.random.normal(0, 1, nNode*nData).reshape((nNode, nData))
+data = np.random.normal(0, 1, (nNode, nData))
 for i in range(1, nNode):
     data[i] = data[i-1] * np.sqrt(1 - alpha) + np.random.normal(0, 1, nData) * np.sqrt(alpha)
 
-rezCorr = crossCorr(data, lagMin, lagMax, est='corr')
-rezSpr  = crossCorr(data, lagMin, lagMax, est='spr')
+rezCorr = crossCorr(data, settings, est='corr')
+rezSpr  = crossCorr(data, settings, est='spr')
 
 plotMatrix(
     "Test 2: Channels are same, but progressively more noisy",
     (2, 3),
     [*rezCorr, *rezSpr],
     np.array(compose(["corr", "spr"], ["val", "lag", "p"])),
-    lims = [[-1, 1], [0, lagMax], [0, 1]]*2,
+    lims = [[-1, 1], [0, settings['max_lag_sources']], [0, 1]]*2,
     draw = True
 )
 
@@ -90,23 +96,26 @@ plotMatrix(
 
 nNode = 5
 lagTrue = 6
-lagMin = 1
-lagMax = 6
-nData = lagMax+1
+settings = {
+    'min_lag_sources' : 1,
+    'max_lag_sources' : 6,
+    'dim_order'       : 'rsp'
+}
+nData = settings['max_lag_sources']+1
 nTrial = 200
 
-data = np.random.normal(0, 1, nTrial*nData*nNode).reshape((nNode, nData, nTrial))
+data = np.random.normal(0, 1, (nTrial,nData,nNode))
 data[0, lagTrue:, :] = data[3, :-lagTrue, :]
 
-rezCorr = crossCorr(data, lagMin, lagMax, est='corr')
-rezSpr  = crossCorr(data, lagMin, lagMax, est='spr')
+rezCorr = crossCorr(data, settings, est='corr')
+rezSpr  = crossCorr(data, settings, est='spr')
 
 plotMatrix(
     "Test 3: Random trial-based cross-correlation",
     (2, 3),
     [*rezCorr, *rezSpr],
     np.array(compose(["corr", "spr"], ["val", "lag", "p"])),
-    lims = [[-1, 1], [0, lagMax], [0, 1]]*2,
+    lims = [[-1, 1], [0, settings['max_lag_sources']], [0, 1]]*2,
     draw = True
 )
 

@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 
 from codes.lib.plots.matplotblib_lib import hist_int
 
+##########################
+# Integer Histogram
+#########################
+
 minlag = 1
 maxlag = 5
 mShape = (12, 12)
