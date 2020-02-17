@@ -40,7 +40,7 @@ def get_analysis_class(methodname):
 
 # Convert results structure into set of matrices for better usability
 # Returns shape [3 x nSource] for one given target
-def parse_single_target(resultClass, nNode, iTrg, method):
+def parse_results_single_target(resultClass, nNode, iTrg, method):
     # Determine metric name to be extracted
     sourceTypeLabel = get_source_type_label(method)
 
@@ -68,7 +68,7 @@ def parse_single_target(resultClass, nNode, iTrg, method):
 
 # Convert results structure into set of matrices for better usability
 # Returns shape [3 x nSource x nTarget]
-def parse_results(results, nNode, method):
+def parse_results_network(results, nNode, method):
     # Determine metric name to be extracted
     sourceTypeLabel = get_source_type_label(method)
 
@@ -78,7 +78,7 @@ def parse_results(results, nNode, method):
     # Parse data
     for iTrg in range(nNode):
         resultClass = results[iTrg] if isinstance(results, list) else results
-        rezMat[:, :, iTrg] = parse_single_target(resultClass, nNode, iTrg, method)
+        rezMat[:, :, iTrg] = parse_results_single_target(resultClass, nNode, iTrg, method)
 
     return rezMat
 
@@ -101,7 +101,7 @@ def analyse_single_target(iTrg, method, data, settings):
     resultClass = analysisClass.analyse_single_target(settings=settings, data=dataIDTxl, target=iTrg)
 
     # Parse results and return them
-    return parse_single_target(resultClass, nNode, iTrg, method)
+    return parse_results_single_target(resultClass, nNode, iTrg, method)
 
 
 # Compute FC for all targets
@@ -121,4 +121,4 @@ def analyse_network(method, data, settings):
     resultClass = analysisClass.analyse_network(settings=settings, data=dataIDTxl)
 
     # Parse results and return them
-    return parse_results(resultClass, nNode, method)
+    return parse_results_network(resultClass, nNode, method)

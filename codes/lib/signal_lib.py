@@ -1,16 +1,15 @@
 import numpy as np
 from scipy import interpolate
 
-from codes.lib.aux_functions import slice_sorted
+from codes.lib.array_lib import slice_sorted, numpy_shape_reduced_axes
 from codes.lib.stat.stat_lib import gaussian
-from codes.lib.aux_functions import reshape_reduced_axes
 
 # def zscore(x):
 #     return (x - np.nanmean(x)) / np.nanstd(x)
 
 # TODO: TEST ME
 def zscore(x, axis=None):
-    shapeNew = reshape_reduced_axes(x.shape, axis)
+    shapeNew = numpy_shape_reduced_axes(x.shape, axis)
     mu = np.nanmean(x, axis=axis).reshape(shapeNew)
     std = np.nanstd(x, axis=axis).reshape(shapeNew)
     return (x - mu) / std
@@ -62,7 +61,6 @@ def downsample_int(x1, y1, nt):
 
     return x2, y2
     
-
 
 # Kernel for gaussian downsampling
 # Can later downsample any dataset with exactly the same sampling points simply multiplying it by the kernel

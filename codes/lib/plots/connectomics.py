@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from codes.lib.aux_functions import slice_sorted
+from codes.lib.array_lib import slice_sorted
 from codes.lib.stat import graph_lib
 from codes.lib.signal_lib import resample, resample_shortest_linear
 

@@ -1,48 +1,5 @@
-import sys
-import numpy as np
-from time import gmtime, strftime
-from datetime import datetime
 import bisect
-import psutil
-
-
-# Convert a list of string integers to a date. The integers correspond to ["YYYY", "MM", "DD"] - Others have not been tested
-def strlst2date(strlst):
-    return datetime(*np.array(strlst, dtype=int))
-
-
-# Calculate difference in days between two dates in a pandas column
-# def date_diff(l):
-#     return np.array([(v - l.iloc[0]).days for v in l])
-def date_diff(lst, v0):
-    return np.array([(v - v0).days for v in lst])
-
-
-# Get current time as string
-def time_now_as_str():
-    return strftime("[%Y.%m.%d %H:%M:%S]", gmtime())
-
-
-# Get current memory use as string
-def mem_now_as_str():
-    return str(psutil.virtual_memory().used)
-
-
-# Print progress bar with percentage
-def progress_bar(i, imax, suffix=None):
-    sys.stdout.write('\r')
-    sys.stdout.write('[{:3d}%] '.format(i * 100 // imax))
-    if suffix is not None:
-        sys.stdout.write(suffix)
-    if i == imax:
-        sys.stdout.write("\n")
-    sys.stdout.flush()
-
-
-# Merge a list of dictionaries with exactly the same key structure
-def merge_dicts(d_lst):
-    return {key : [d[key] for d in d_lst] for key in d_lst[0].keys()}
-
+import numpy as np
 
 # Compute indices of slice of sorted data which fit into the provided range
 def slice_sorted(data, rng):
@@ -61,20 +18,42 @@ def perm_map_str(a, b):
     return perm_map_arr(np.array(list(a)), np.array(list(b)))
 
 
+# Transpose data dimensions given permutation of axis labels
+def numpy_transpose_byorder(data, orderSrc, orderTrg):
+    if sorted(orderSrc) != sorted(orderTrg):
+        raise ValueError('Cannot transform', orderSrc, "to", orderTrg)
+    return data.transpose(perm_map_str(orderSrc, orderTrg))
+
+
 # Return original shape, but replace all axis that have been reduced with ones
 # So final shape looks as if it is of the same dimension as original
 # Useful for broadcasting reduced arrays onto original arrays
-def reshape_reduced_axes(shapeOrig, axisReduced):
-    if axisReduced is None:
-        return (1,)
+def numpy_shape_reduced_axes(shapeOrig, reducedAxis):
+    if reducedAxis is None:  # All axes have been reduced
+        return tuple([1]*len(shapeOrig))
     else:
-        if not isinstance(axisReduced, tuple):
-            axisReduced = (axisReduced,)
+        if not isinstance(reducedAxis, tuple):
+            reducedAxis = (reducedAxis,)
 
         shapeNew = list(shapeOrig)
-        for idx in axisReduced:
+        for idx in reducedAxis:
             shapeNew[idx] = 1
         return tuple(shapeNew)
+
+
+# Add extra dimensions of size 1 to array at given locations
+def numpy_add_empty_axes(x, axes):
+    newShape = list(x.shape)
+    for axis in axes:
+        newShape.insert(axis, 1)
+    return x.reshape(tuple(newShape))
+
+
+# Reshape array by merging all dimensions between l and r
+def numpy_merge_dimensions(data, l, r):
+    shOrig = list(data.shape)
+    shNew = tuple(shOrig[:l] + [np.prod(shOrig[l:r])] + shOrig[r:])
+    return data.reshape(shNew)
 
 
 # Assign each string to one key out of provided

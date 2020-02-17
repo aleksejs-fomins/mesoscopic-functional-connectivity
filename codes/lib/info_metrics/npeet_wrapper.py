@@ -1,31 +1,8 @@
 import numpy as np
 
-from codes.lib.aux_functions import perm_map_str
+from codes.lib.array_lib import numpy_add_empty_axes, numpy_merge_dimensions, numpy_transpose_byorder
 
 import npeet.entropy_estimators as ee
-
-
-# Add extra dimensions of size 1 to array at given locations
-def numpy_reshape_extradim(x, reducedAxis):
-    newShape = list(x.shape)
-    for axis in reducedAxis:
-        newShape.insert(axis, 1)
-    return x.reshape(tuple(newShape))
-
-
-
-# Transpose data dimensions given permutation of axis labels
-def data_transpose_byorder(data, orderSrc, orderTrg):
-    if sorted(orderSrc) != sorted(orderTrg):
-        raise ValueError('Cannot transform', orderSrc, "to", orderTrg)
-    return data.transpose(perm_map_str(orderSrc, orderTrg))
-
-
-# Reshape array by merging all dimensions between l and r
-def numpy_merge_dimensions(data, l, r):
-    shOrig = list(data.shape)
-    shNew = tuple(shOrig[:l] + [np.prod(shOrig[l:r])] + shOrig[r:])
-    return data.reshape(shNew)
 
 
 # Compute metrics individually for each channel
@@ -48,16 +25,16 @@ def npeet_metric_ND_generic(method, data, settings):
 
 
 def entropy(data, settings):
-    dataCanon = data_transpose_byorder(data, settings['dim_order'], 'srp')
+    dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'srp')
     dataFlat = numpy_merge_dimensions(dataCanon, 0, 2)
     rez = ee.entropy(dataFlat)
-    return numpy_reshape_extradim(rez, [1])  # Need extra dimension for number of results (1 in this case)
+    return numpy_add_empty_axes(rez, [1])  # Need extra dimension for number of results (1 in this case)
 
 
 # Predictive information
 # Defined as H(Future) - H(Future | Past) = MI(Future : Past)
 def predictive_info(data, settings):
-    dataCanon = data_transpose_byorder(data, settings['dim_order'], 'srp')
+    dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'srp')
     nTime = dataCanon.shape[0]
     lag = settings['max_lag']
 
@@ -72,4 +49,4 @@ def predictive_info(data, settings):
     y = numpy_merge_dimensions(dataCanon[lag:], 0, 2)
 
     rez = ee.mi(x, y)
-    return numpy_reshape_extradim(rez, [1])  # Need extra dimension for number of results (1 in this case)
+    return numpy_add_empty_axes(rez, [1])  # Need extra dimension for number of results (1 in this case)

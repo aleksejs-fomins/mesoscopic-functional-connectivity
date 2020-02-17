@@ -2,7 +2,7 @@ import multiprocessing
 import jpype as jp
 import sys
 
-from codes.lib.aux_functions import time_now_as_str, mem_now_as_str
+from codes.lib.sys_lib import time_now_as_str, mem_now_as_str
 
 
 # def parallelJVMShutdown(i):

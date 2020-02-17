@@ -1,7 +1,7 @@
 import sys
 import time
 import numpy as np
-from codes.lib.aux_functions import mem_now_as_str
+from codes.lib.sys_lib import mem_now_as_str
 
 
 def heavyFunc(i):

@@ -1,6 +1,6 @@
 import numpy as np
 
-from codes.lib.aux_functions import slice_sorted
+from codes.lib.array_lib import slice_sorted
 from codes.lib.signal_lib import resample, resample_kernel
 
 

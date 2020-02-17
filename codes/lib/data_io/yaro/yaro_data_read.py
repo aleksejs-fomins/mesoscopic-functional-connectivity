@@ -5,7 +5,7 @@ import numpy as np
 from codes.lib.data_io.yaro.mouse_performance import mouse_performance_single_session
 #from codes.lib.data_io.os_lib import get_subfolders
 from codes.lib.data_io.matlab_lib import loadmat, matstruct2dict
-from codes.lib.aux_functions import merge_dicts
+from codes.lib.dict_lib import merge_dicts
 
 
 # Read data and behaviour matlab files given containing folder

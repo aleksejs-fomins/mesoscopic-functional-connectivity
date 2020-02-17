@@ -1,6 +1,6 @@
 import numpy as np
 
-from codes.lib.aux_functions import mem_now_as_str
+from codes.lib.sys_lib import mem_now_as_str
 from codes.lib.decorators_lib import time_mem_1starg
 import codes.lib.info_metrics.idtxl_wrapper as idtxl_wrapper
 import codes.lib.info_metrics.npeet_wrapper as npeet_wrapper
@@ -55,40 +55,6 @@ def metric_2d_network(library, method, data, settings):
         return crossCorr(data, settings, est=method)
     else:
         raise ValueError("Unexpected library", library)
-
-#
-# def fc_single_target(iTrg, data, library, method, settings):
-#     # Compute single target FC for preprocessed data
-#     return analyse_single_target(iTrg, library, method, data, settings)
-#
-#
-# # Parallelize a FC estimate over targets
-# def fc_parallel_target(data, library, method, settings, serial=False, nCore=None):
-#     # Get number of nodes
-#     idxNodeShape = settings['dim_order'].index("p")
-#     nNode = data.shape[idxNodeShape]
-#
-#     # Initialize mapper depending on whether we do parallel or serial computation
-#     mapper = GenericMapper(serial, nCore=nCore)
-#
-#     # Construct task generator
-#     def task_gen():
-#         for iTrg in range(nNode):
-#             yield iTrg, library, method, data, settings
-#
-#     # Ugly intermediate function to unpack tuple
-#     parallel_task_proxy = lambda task : analyse_single_target(*task)
-#
-#     rez = mapper.map(parallel_task_proxy, task_gen())
-#     return np.array(rez).transpose((1,2,0))  # (nTrg, 3, nSrc) -> (3, nSrc, nTrg)
-#
-#
-# # Switch between serial analysis of whole network simultaneously, or parallel analysis of one target at a time
-# def fc_parallel(data, library, method, settings, parTarget=True, serial=False, nCore=None):
-#     if parTarget:
-#         return fc_parallel_target(data, library, method, settings, serial=serial, nCore=nCore)
-#     else:
-#         return analyse_network(library, method, data, settings)
 
 
 def parallel_metric_1d(dataLst, library, methods, settings, nCh, parCh=True, serial=False, nCore=None):

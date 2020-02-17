@@ -16,7 +16,7 @@ sys.path.append(rootpath)
 print("Appended root directory", rootpath)
 
 # User libraries
-from codes.lib.aux_functions import mem_now_as_str
+from codes.lib.sys_lib import mem_now_as_str
 from codes.lib.data_io.yaro.yaro_data_read import read_neuro_perf
 from codes.lib.info_metrics.info_metrics_generic import metric_2d_single_target
 

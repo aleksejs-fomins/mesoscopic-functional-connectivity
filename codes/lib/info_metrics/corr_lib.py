@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.stats
 
-from codes.lib.aux_functions import perm_map_str
+from codes.lib.array_lib import numpy_transpose_byorder
 from codes.lib.stat.stat_lib import bonferroni_correction, mu_std
 
 
@@ -75,9 +75,9 @@ def crossCorr(data, settings, est='corr'):
 
     # Transpose dataset into comfortable form
     if haveTrials:
-        dataOrd = data.transpose(perm_map_str(settings['dim_order'], 'psr'))
+        dataOrd = numpy_transpose_byorder(data, settings['dim_order'], 'psr')
     else:
-        dataOrd = data.transpose(perm_map_str(settings['dim_order'], 'ps'))
+        dataOrd = numpy_transpose_byorder(data, settings['dim_order'], 'ps')
 
     # Extract dimensions
     nNode, nTime = dataOrd.shape[:2]

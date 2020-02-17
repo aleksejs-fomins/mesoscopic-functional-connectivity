@@ -1,6 +1,6 @@
 import numpy as np
 
-from codes.lib.aux_functions import date_diff
+from codes.lib.sys_lib import date_diff
 
 
 # Performance is true positive + true negative frequency

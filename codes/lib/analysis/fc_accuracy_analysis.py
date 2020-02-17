@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 import pandas as pd
 
-from codes.lib.aux_functions import merge_dicts
+from codes.lib.dict_lib import merge_dicts
 from codes.lib.signal_lib import resample
 from codes.lib.info_metrics.info_metrics_generic import parallel_metric_2d
 from codes.lib.analysis.simulated_file_io import write_fc_h5

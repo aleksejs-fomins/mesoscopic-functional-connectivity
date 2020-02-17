@@ -4,7 +4,8 @@ import itertools
 
 from os.path import basename, dirname, join
 
-from codes.lib.aux_functions import bin_data_by_keys, strlst2date, slice_sorted
+from codes.lib.sys_lib import strlst2date
+from codes.lib.array_lib import bin_data_by_keys, slice_sorted
 from codes.lib.data_io.yaro.mouse_performance import mouse_performance_allsessions
 from codes.lib.pandas_lib import filter_rows_colval, filter_rows_colvals
 from codes.lib.data_io.matlab_lib import loadmat
