@@ -5,7 +5,7 @@ under index permutation
 
 import numpy as np
 
-from codes.lib.stat.stat_lib import rand_bool_perm, log_likelihood, discrete_resample, discrete_distr_to_cdf
+from codes.lib.stat.stat_lib import rand_bool_perm, log_likelihood, discrete_cdf_sample, discrete_distr_to_cdf
 from codes.lib.stat.comb_lib import log_comb
 
 # Find a probability distribution of the number of entries shared by two binary arrays

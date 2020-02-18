@@ -52,7 +52,7 @@ vals /= np.sum(vals)
 pdf = dict(zip(keys,vals))
 cdf = stat_lib.discrete_distr_to_cdf(pdf)
 
-resample = stat_lib.discrete_resample(cdf, N_TEST3)
+resample = stat_lib.discrete_cdf_sample(cdf, N_TEST3)
 emp_pdf = stat_lib.discrete_empirical_pdf_from_sample(resample)
 
 assert emp_pdf.keys() == pdf.keys()

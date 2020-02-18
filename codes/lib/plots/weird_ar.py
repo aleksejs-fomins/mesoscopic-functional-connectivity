@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from codes.lib.stat.stat_lib import bootstrap_resample_function
+from codes.lib.stat.resample_lib import resample_monad
 
 
 def _calc_ar_mle(dataArr):
@@ -20,7 +20,7 @@ def _calc_ar_mle(dataArr):
 
 # Data shape [nTrial, nTime]
 def test_ar_decay_const(data, nSample=1000, alphaThr=0.9):
-    alphaArr, betaArr = np.array(bootstrap_resample_function(_calc_ar_mle, data, nSample)).T
+    alphaArr, betaArr = np.array(resample_monad(_calc_ar_mle, data, nSample, method="bootstrap")).T
     print("For nSample =", nSample, "P[a >=", alphaArr, "] =", np.sum(alphaArr > alphaThr))
 
     fig, ax = plt.subplots(ncols=2, figsize=(10, 5))
