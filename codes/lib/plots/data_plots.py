@@ -3,11 +3,13 @@ import numpy as np
 from scipy.special import loggamma
 from scipy.optimize import minimize
 
+from codes.lib.stat.graph_lib import offdiag_1D
 from codes.lib.stat.stat_lib import mu_std, tolerance_interval_1D
 from codes.lib.stat.ml_lib import split_train_test
 from codes.lib.signal_lib import zscore
-from codes.lib.info_metrics.corr_lib import autocorr1D
+from codes.lib.info_metrics.corr_lib import corr_nan, autocorr1D
 from codes.lib.info_metrics.autoregression1D import AR1D
+from codes.lib.info_metrics.npeet_wrapper import entropy, predictive_info
 
 
 ##################################
@@ -165,3 +167,73 @@ def plot_fit_gamma(ax, data):
     # minClass = minimize(norm_wrap, theta0, method='Nelder-Mead')
 
 
+# Patch Nan's for each channel with mean over that channel
+def _patch_nan(data3D):
+    nTrial, nTime, nChannel = data3D.shape
+    dataPatch = np.copy(data3D)
+    for iChannel in range(nChannel):
+        dataPatch[:,:,iChannel][np.isnan(dataPatch[:,:,iChannel])] = np.nanmean(dataPatch[:,:,iChannel])
+
+    assert ~np.any(np.isnan(dataPatch))
+
+    return dataPatch
+
+
+def plot_mean_correlation_bytime(ax, data, fps=1):
+    nTrial, nTime, nChannel = data.shape
+
+    # FIXME
+    # dataNoNan = _patch_nan(data)
+    dataNoNan = np.copy(data)
+
+    x = np.arange(nTime) / fps
+    synchrony_coeff = lambda data2D: np.nanmean(np.abs(offdiag_1D(np.corrcoef(data2D))))
+    sCoeff = [synchrony_coeff(dataNoNan[:, iTime, :]) for iTime in range(nTime)]
+
+    ax.plot(x, sCoeff)
+    ax.set_ylim([0,1])
+    ax.set_xlabel('Time steps')
+    ax.set_title('Synchronization coefficient')
+
+
+def plot_entropy_ND_bytime(ax1, ax2, ax3, data, fps=1):
+    nTrial, nTime, nChannel = data.shape
+
+    # FIXME
+    # dataNoNan = _patch_nan(data)
+
+    dataScored = np.array([zscore(data[:,:,iChannel]) for iChannel in range(nChannel)]).transpose((1, 2, 0))
+
+    xEntr = np.arange(nTime) / fps
+    xPI = np.arange(nTime-1) / fps
+
+    entropy_1D = lambda data1D: entropy(data1D[..., None, None], {"dim_order": "rps"})
+    entropy_2D = lambda data2D: entropy(data2D[..., None], {"dim_order" : "rps"})
+    pi_1D      = lambda data1D: predictive_info(data1D[..., None], {"dim_order": "rsp", "max_lag": 1})
+    pi_2D      = lambda data2D: predictive_info(data2D[...], {"dim_order": "rsp", "max_lag":1})
+
+
+    e1D = [np.mean([entropy_1D(dataScored[:, iTime, iChannel]) for iChannel in range(nChannel)]) for iTime in range(nTime)]
+    pi1D = [np.mean([pi_1D(dataScored[:, iTime:iTime + 2, iChannel]) for iChannel in range(nChannel)]) for iTime in range(nTime - 1)]
+
+    e2D = [entropy_2D(dataScored[:, iTime, :]) for iTime in range(nTime)]
+    pi2D = [pi_2D(dataScored[:, iTime:iTime+2, :]) for iTime in range(nTime-1)]
+
+    e1D = np.array(e1D)
+    e2D = np.array(e2D)[:, 0]
+    pi1D = np.array(pi1D)
+    pi2D = np.array(pi2D)[:, 0]
+
+    ax1.plot(xEntr, e1D, label="Max Entropy")
+    ax1.plot(xEntr, e2D / nChannel, label="ND Entropy")
+    ax2.plot(xEntr, (e1D - e2D / nChannel) / 2)
+    ax3.plot(xPI, pi1D, label='avg1D')
+    ax3.plot(xPI, pi2D, label='ND')
+    ax1.legend()
+    ax3.legend()
+    ax1.set_xlabel('Time steps')
+    ax2.set_xlabel('Time steps')
+    ax3.set_xlabel('Time steps')
+    ax1.set_title('Normalized Entropy')
+    ax2.set_title('Normalized Total Correlation')
+    ax3.set_title('Predictive Information')

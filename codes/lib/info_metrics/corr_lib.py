@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.stats
 
+from codes.lib.signal_lib import zscore
 from codes.lib.array_lib import numpy_transpose_byorder
 from codes.lib.stat.stat_lib import bonferroni_correction, mu_std
 
@@ -9,6 +10,19 @@ def corr_significance(c, nData):
     t = c * np.sqrt((nData - 2) / (1 - c**2))
     t[t == np.nan] = np.inf
     return scipy.stats.t(nData).pdf(t)
+
+
+# Correlation that works if some values in the dataset are NANs
+def corr_nan(x2D):
+    pass
+    # z2D = zscore(x2D, axis=1)
+    # nChannel, nData = x2D.shape
+    # rez = np.ones((nChannel, nChannel))
+    # for i in range(nChannel):
+    #     for j in range(i+1, nChannel):
+    #         rez[i][j] = np.nanmean(z2D[i] * z2D[j])
+    #         rez[j][i] = rez[i][j]
+    # return rez
 
 
 # Correlation. Requires leading dimension to be channels

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file '/media/aleksejs/DataHDD/work/codes/comp-neuro/analysis-mesoscopic/mesoscopic-functional-connectivity/codes/moviemaker/moviemakerapp.ui'
 #
-# Created by: PyQt5 UI code generator 5.10.1
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -19,6 +19,7 @@ class Ui_MovieMakerApp(object):
         self.horizontalLayout.setSpacing(6)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
+        self.verticalLayout_2.setContentsMargins(11, 11, 11, 11)
         self.verticalLayout_2.setSpacing(6)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.fcDataComboBox = QtWidgets.QComboBox(self.centralWidget)
@@ -43,6 +44,7 @@ class Ui_MovieMakerApp(object):
         self.verticalLayout_2.addWidget(self.channelTableWidget)
         self.horizontalLayout.addLayout(self.verticalLayout_2)
         self.verticalLayout = QtWidgets.QVBoxLayout()
+        self.verticalLayout.setContentsMargins(11, 11, 11, 11)
         self.verticalLayout.setSpacing(6)
         self.verticalLayout.setObjectName("verticalLayout")
         self.movieFrame = QtWidgets.QFrame(self.centralWidget)
@@ -59,11 +61,13 @@ class Ui_MovieMakerApp(object):
         self.verticalLayout_6.setSpacing(6)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
         self.movieFrameLayout = QtWidgets.QVBoxLayout()
+        self.movieFrameLayout.setContentsMargins(11, 11, 11, 11)
         self.movieFrameLayout.setSpacing(6)
         self.movieFrameLayout.setObjectName("movieFrameLayout")
         self.verticalLayout_6.addLayout(self.movieFrameLayout)
         self.verticalLayout.addWidget(self.movieFrame)
         self.movieControlsLayout = QtWidgets.QHBoxLayout()
+        self.movieControlsLayout.setContentsMargins(11, 11, 11, 11)
         self.movieControlsLayout.setSpacing(6)
         self.movieControlsLayout.setObjectName("movieControlsLayout")
         self.movieFrameSlider = QtWidgets.QSlider(self.centralWidget)
