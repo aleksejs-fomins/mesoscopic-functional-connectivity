@@ -18,6 +18,15 @@ from codes.lib.info_metrics.mar_wrapper import ar1_coeff, ar1_testerr, ar_tester
         Const           1 number regardless of input
         Linear          1D wrt channels
         Quadratic       2D wrt channels
+        
+    TODO:
+        * Window-based iterator
+        * H5 I/O For data results
+        * Optimization
+            * Convert to class with intermediate storage
+            * Parallelization
+        * Convert to standalone library
+        
 '''
 
 def applier(data, metricFunc, axis, settings):
@@ -59,7 +68,7 @@ def applier(data, metricFunc, axis, settings):
         raise ValueError("Weird axis", axis, dualAxis)
 
 
-def metric_wrapper(data, metricName, metricParam):
+def metric3D(data, metricName, metricParam):
     metricDict = {
         "mean"         : lambda data, axis, settings: np.nanmean(data, axis=axis),
         "std"          : lambda data, axis, settings: np.nanstd(data, axis=axis),
@@ -110,15 +119,3 @@ def metric_wrapper(data, metricName, metricParam):
         fakeDim = "".join([str(i) for i in range(lenRez)])
 
         return rez.transpose(perm_map_str(postDimOrder + fakeDim, trgDimOrder + fakeDim))
-
-
-def metric3D(data3D, metricName, metricParam):
-    '''
-    A procedure to apply an info-theoretic metric to a 3D data
-
-    :param data3D:      Data of the shape [nTrial, nTime, nChannel]
-    :param metricName:  Name of the metric to compute
-    :param axis:        Axes that will be integrated over to compute the metric
-    :return:            Array of shape (src/axis)
-    '''
-    return metric_wrapper(data3D, metricName, metricParam)
