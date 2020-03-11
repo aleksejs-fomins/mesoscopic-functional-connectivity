@@ -11,7 +11,7 @@ print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 # import special libraries
-from codes.lib.info_metrics.corr_lib import crossCorr
+from codes.lib.info_metrics.corr_lib import cross_corr_3D
 from codes.lib.plots.matrix import plotMatrix
 
 '''
@@ -38,8 +38,8 @@ data[0] = np.random.normal(0, 1, nData)
 for i in range(1, nNode):
     data[i] = np.hstack((data[i-1][1:], data[i-1][0]))
 
-rezCorr = crossCorr(data, settings, est='corr')
-rezSpr = crossCorr(data, settings, est='spr')
+rezCorr = cross_corr_3D(data, settings, est='corr')
+rezSpr = cross_corr_3D(data, settings, est='spr')
 
 compose = lambda lst1, lst2: [a + "_" + b for a in lst1 for b in lst2]
 
@@ -74,8 +74,8 @@ data = np.random.normal(0, 1, (nNode, nData))
 for i in range(1, nNode):
     data[i] = data[i-1] * np.sqrt(1 - alpha) + np.random.normal(0, 1, nData) * np.sqrt(alpha)
 
-rezCorr = crossCorr(data, settings, est='corr')
-rezSpr  = crossCorr(data, settings, est='spr')
+rezCorr = cross_corr_3D(data, settings, est='corr')
+rezSpr  = cross_corr_3D(data, settings, est='spr')
 
 plotMatrix(
     "Test 2: Channels are same, but progressively more noisy",
@@ -107,8 +107,8 @@ nTrial = 200
 data = np.random.normal(0, 1, (nTrial,nData,nNode))
 data[0, lagTrue:, :] = data[3, :-lagTrue, :]
 
-rezCorr = crossCorr(data, settings, est='corr')
-rezSpr  = crossCorr(data, settings, est='spr')
+rezCorr = cross_corr_3D(data, settings, est='corr')
+rezSpr  = cross_corr_3D(data, settings, est='spr')
 
 plotMatrix(
     "Test 3: Random trial-based cross-correlation",

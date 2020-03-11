@@ -1,6 +1,6 @@
 import numpy as np
 
-from codes.lib.array_lib import numpy_add_empty_axes, numpy_merge_dimensions, numpy_transpose_byorder
+from codes.lib.array_lib import numpy_merge_dimensions, numpy_transpose_byorder, test_have_dim
 
 import npeet.entropy_estimators as ee
 
@@ -24,16 +24,19 @@ def npeet_metric_ND_generic(method, data, settings):
     return methodsND[method](data, settings)
 
 
+# FIXME: Correct info_metrics_generic to account for missing results dimension
 def entropy(data, settings):
-    dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'srp')
+    dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'srp', augment=True)
     dataFlat = numpy_merge_dimensions(dataCanon, 0, 2)
-    rez = ee.entropy(dataFlat)
-    return numpy_add_empty_axes(rez, [1])  # Need extra dimension for number of results (1 in this case)
+    return ee.entropy(dataFlat)
 
 
 # Predictive information
 # Defined as H(Future) - H(Future | Past) = MI(Future : Past)
+# FIXME: Correct info_metrics_generic to account for missing results dimension
 def predictive_info(data, settings):
+    test_have_dim("autocorr_3D", settings['dim_order'], "s")
+
     dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'srp')
     nTime = dataCanon.shape[0]
     lag = settings['max_lag']
@@ -48,5 +51,17 @@ def predictive_info(data, settings):
     # shape transform for y :: (srp) -> (s*r, p)
     y = numpy_merge_dimensions(dataCanon[lag:], 0, 2)
 
-    rez = ee.mi(x, y)
-    return numpy_add_empty_axes(rez, [1])  # Need extra dimension for number of results (1 in this case)
+    return ee.mi(x, y)
+
+
+# Compute the total correlation, normalized by number of processes/channels
+def total_correlation(data, settings):
+    test_have_dim("TC", settings['dim_order'], "p")
+
+    dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'psr', augment=True)
+    nChannel = dataCanon.shape[0]
+
+    e2Davg = entropy(dataCanon, {"dim_order" : "psr"}) / nChannel
+    e1Davg = np.nanmean([entropy(d, {"dim_order" : "sr"}) for d in dataCanon], axis=0)
+
+    return e1Davg - e2Davg

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from codes.lib.info_metrics.corr_lib import corr, crossCorr
+from codes.lib.info_metrics.corr_lib import corr_2D, cross_corr_3D
 from codes.lib.stat import graph_lib
 
 
@@ -59,7 +59,7 @@ def plot_correlation_connectivity_metrics(dataDB):
             for i, dataIdx in enumerate(dataIdxs):
                 # Compute cross-correlation absolute value
                 dataThis = dataDB.dataNeuronal[dataIdx].transpose(2, 1, 0)  # channel x time x trial for cross-corr
-                cAbs = np.abs(crossCorr(dataThis, 0, 0)[0])
+                cAbs = np.abs(cross_corr_3D(dataThis, 0, 0)[0])
 
                 # Compute connectivity metrics
                 testResults[i] = np.array([
@@ -112,7 +112,7 @@ def plot_correlation_mean_cc_bytime(dataDB):
 
                     ccNoNorm = np.zeros(nTime)
                     for iTime in range(nTime):
-                        corrAbs = np.abs(corr(dataThis[:, iTime, :].T))
+                        corrAbs = np.abs(corr_2D(dataThis[:, iTime, :].T))
                         ccNoNorm[iTime] = np.mean(graph_lib.clustering_coefficient(corrAbs, normDegree=False))
 
                     ax[iKey].plot(ccNoNorm, label=dataLabel)

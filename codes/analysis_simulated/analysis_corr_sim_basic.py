@@ -12,7 +12,7 @@ print("Appending project path", rootpath)
 sys.path.append(rootpath)
 
 # Local libraries
-from codes.lib.info_metrics.corr_lib import crossCorr
+from codes.lib.info_metrics.corr_lib import cross_corr_3D
 from codes.lib.plots.matrix import plotMatrix
 
 
@@ -44,8 +44,8 @@ for filename in fname_lst:
     DELAY_MIN = 1
     DELAY_MAX = 6
 
-    corrMat, corrDelMat = crossCorr(data, DELAY_MIN, DELAY_MAX, est='corr')
-    sprMat,  sprDelMat = crossCorr(data, DELAY_MIN, DELAY_MAX, est='spr')
+    corrMat, corrDelMat = cross_corr_3D(data, DELAY_MIN, DELAY_MAX, est='corr')
+    sprMat,  sprDelMat = cross_corr_3D(data, DELAY_MIN, DELAY_MAX, est='spr')
 
     rez_file_h5.close()
 

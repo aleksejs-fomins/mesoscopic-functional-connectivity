@@ -4,7 +4,7 @@ from codes.lib.sys_lib import mem_now_as_str
 from codes.lib.decorators_lib import time_mem_1starg
 import codes.lib.info_metrics.idtxl_wrapper as idtxl_wrapper
 import codes.lib.info_metrics.npeet_wrapper as npeet_wrapper
-from codes.lib.info_metrics.corr_lib import crossCorr
+from codes.lib.info_metrics.corr_lib import cross_corr_3D
 from codes.lib.parallel_lib import GenericMapper
 from codes.lib.sweep_lib import Sweep1D, Sweep2D
 
@@ -52,7 +52,7 @@ def metric_2d_network(library, method, data, settings):
     if library == 'idtxl':
         return idtxl_wrapper.analyse_network(method, data, settings)
     elif library == 'corr':
-        return crossCorr(data, settings, est=method)
+        return cross_corr_3D(data, settings, est=method)
     else:
         raise ValueError("Unexpected library", library)
 

@@ -12,7 +12,7 @@ sys.path.append(rootpath)
 
 # import special libraries
 from codes.lib.models.test_lib import dynsys, dynsys_gettrueconn
-from codes.lib.info_metrics.corr_lib import corr3D
+from codes.lib.info_metrics.corr_lib import corr_3D
 
 # Set parameters
 param = {
@@ -36,7 +36,7 @@ for iNode in range(param['nTrial']):
 plt.show()
 
 #[channel x time x trial]
-fc, pval = corr3D(data.transpose((1, 2, 0)))
+fc, pval = corr_3D(data.transpose((1, 2, 0)))
 
 plt.figure()
 plt.imshow(np.abs(fc), vmin=0, vmax=1)

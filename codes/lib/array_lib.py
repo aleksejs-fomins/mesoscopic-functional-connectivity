@@ -18,11 +18,48 @@ def perm_map_str(a, b):
     return perm_map_arr(np.array(list(a)), np.array(list(b)))
 
 
+# Returns set subtraction of s1 - s2, preserving order of s1
+def unique_subtract(s1, s2):
+    rez = [s for s in s1 if s not in s2]
+    if type(s1) == list:
+        return rez
+    elif type(s1) == str:
+        return "".join(rez)
+    elif type(s1) == tuple:
+        return tuple(rez)
+    else:
+        raise ValueError("Unexpected Type", type(s1))
+
+
+# Test if a given dimension is part of a dimension order
+def test_have_dim(task, dimOrd, trgDim):
+    if trgDim not in dimOrd:
+        dimNameDict = {
+            "p": "processes (aka channels)",
+            "s": "samples (aka times)",
+            "r": "repetitions (aka trials)"
+        }
+        raise ValueError(task, "requires", dimNameDict[trgDim], "dimension; have", dimOrd)
+
+
 # Transpose data dimensions given permutation of axis labels
-def numpy_transpose_byorder(data, orderSrc, orderTrg):
-    if sorted(orderSrc) != sorted(orderTrg):
-        raise ValueError('Cannot transform', orderSrc, "to", orderTrg)
-    return data.transpose(perm_map_str(orderSrc, orderTrg))
+# If augment option is on, then extra axis of length 1 are added when missing
+def numpy_transpose_byorder(data, orderSrc, orderTrg, augment=False):
+    if data.ndim != len(orderSrc):
+        raise ValueError("Incompatible data", data.shape, "and order", orderSrc)
+
+    if not augment:
+        if set(orderSrc) != set(orderTrg):
+            raise ValueError('Cannot transform', orderSrc, "to", orderTrg)
+        return data.transpose(perm_map_str(orderSrc, orderTrg))
+    else:
+        if not set(orderSrc).issubset(set(orderTrg)):
+            raise ValueError('Cannot augment', orderSrc, "to", orderTrg)
+        nIncr = len(orderTrg) - len(orderSrc)
+        newShape = data.shape + tuple([1]*nIncr)
+        newOrder = orderSrc + unique_subtract(orderTrg, orderSrc)
+
+        return data.reshape(newShape).transpose(perm_map_str(newOrder, orderTrg))
 
 
 # Return original shape, but replace all axis that have been reduced with ones

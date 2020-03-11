@@ -1,14 +1,11 @@
 import numpy as np
 
-from scipy.special import loggamma
-from scipy.optimize import minimize
-
 from codes.lib.stat.graph_lib import offdiag_1D
 from codes.lib.stat.stat_lib import mu_std, tolerance_interval_1D
 from codes.lib.stat.ml_lib import split_train_test
 from codes.lib.signal_lib import zscore
-from codes.lib.info_metrics.corr_lib import corr_nan, autocorr1D
-from codes.lib.info_metrics.autoregression1D import AR1D
+from codes.lib.info_metrics.corr_lib import autocorr_1D
+from codes.lib.info_metrics.mar.autoregression1D import AR1D
 from codes.lib.info_metrics.npeet_wrapper import entropy, predictive_info
 
 
@@ -52,7 +49,7 @@ def plot_autocorrelation_bychannel(ax, data, fps=1, withFill=True):
     x = np.arange(nTime) / fps
     for iCh in range(nChannel):
         dataThis = zscore(data[:, :, iCh])
-        autocorrArr = np.array([autocorr1D(dataThis[iTr]) for iTr in range(nTrial)])
+        autocorrArr = np.array([autocorr_1D(dataThis[iTr]) for iTr in range(nTrial)])
 
         mu, std = mu_std(autocorrArr, axis=0)
         confL, confR = np.array([tolerance_interval_1D(x) for x in autocorrArr.T]).T
@@ -207,8 +204,8 @@ def plot_entropy_ND_bytime(ax1, ax2, ax3, data, fps=1):
     xEntr = np.arange(nTime) / fps
     xPI = np.arange(nTime-1) / fps
 
-    entropy_1D = lambda data1D: entropy(data1D[..., None, None], {"dim_order": "rps"})
-    entropy_2D = lambda data2D: entropy(data2D[..., None], {"dim_order" : "rps"})
+    entropy_1D = lambda data1D: entropy(data1D, {"dim_order": "r"})
+    entropy_2D = lambda data2D: entropy(data2D, {"dim_order" : "rp"})
     pi_1D      = lambda data1D: predictive_info(data1D[..., None], {"dim_order": "rsp", "max_lag": 1})
     pi_2D      = lambda data2D: predictive_info(data2D[...], {"dim_order": "rsp", "max_lag":1})
 

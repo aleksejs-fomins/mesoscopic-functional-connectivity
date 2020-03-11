@@ -6,7 +6,7 @@ from os.path import basename, dirname, join, isfile
 
 # from codes.lib.aux_functions import bin_data_by_keys, strlst2date, slice_sorted
 # from codes.lib.data_io.yaro.mouse_performance import mouse_performance_allsessions
-# from codes.lib.pandas_lib import filter_rows_colval, filter_rows_colvals
+from codes.lib.pandas_lib import filter_rows_colval, filter_rows_colvals
 from codes.lib.data_io.matlab_lib import loadmat
 from codes.lib.data_io.os_lib import getfiles_walk
 
@@ -187,8 +187,8 @@ class DataFCDatabase :
     #     return len(self.channelLabelsDict[mousename])
     #
     #
-    # def get_rows(self, frameName, coldict):
-    #     return filter_rows_colvals(self.metaDataFrames[frameName], coldict)
+    def get_rows(self, frameName, coldict):
+        return filter_rows_colvals(self.metaDataFrames[frameName], coldict)
     #
     #
     # # Find FC data for specified rows, then crop to selected time range

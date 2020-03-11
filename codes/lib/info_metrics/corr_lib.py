@@ -2,8 +2,9 @@ import numpy as np
 import scipy.stats
 
 from codes.lib.signal_lib import zscore
-from codes.lib.array_lib import numpy_transpose_byorder
-from codes.lib.stat.stat_lib import bonferroni_correction, mu_std
+from codes.lib.array_lib import numpy_merge_dimensions, numpy_transpose_byorder, test_have_dim
+from codes.lib.stat.stat_lib import mu_std
+from codes.lib.stat.graph_lib import offdiag_1D
 
 
 def corr_significance(c, nData):
@@ -12,23 +13,10 @@ def corr_significance(c, nData):
     return scipy.stats.t(nData).pdf(t)
 
 
-# Correlation that works if some values in the dataset are NANs
-def corr_nan(x2D):
-    pass
-    # z2D = zscore(x2D, axis=1)
-    # nChannel, nData = x2D.shape
-    # rez = np.ones((nChannel, nChannel))
-    # for i in range(nChannel):
-    #     for j in range(i+1, nChannel):
-    #         rez[i][j] = np.nanmean(z2D[i] * z2D[j])
-    #         rez[j][i] = rez[i][j]
-    # return rez
-
-
 # Correlation. Requires leading dimension to be channels
 # If y2D not specified, correlation computed between channels of x
 # If y2D is specified, correlation computed for x-x and x-y in a composite matrix
-def corr(x2D, y2D=None, est='corr'):
+def corr_2D(x2D, y2D=None, est='corr'):
     nChannel, nData = x2D.shape
     if est == 'corr':
         c = np.corrcoef(x2D, y2D)
@@ -48,21 +36,26 @@ def corr(x2D, y2D=None, est='corr'):
 
 
 # If data has trials, concatenate trials into single timeline when computing correlation
-# Data - 3D matrix [channel x time x trial]
-def corr3D(x3D, y3D=None, est='corr'):
-    shape2D = (x3D.shape[0], np.prod(x3D.shape[1:]))
-    x2D = x3D.reshape(shape2D)
-    y2D = y3D.reshape(shape2D) if y3D is not None else None
-    return corr(x2D, y2D, est=est)
+def corr_3D(data, settings, est='corr'):
+    # Convert to canonical form
+    test_have_dim("corr3D", settings['dim_order'], "p")
+    dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'psr', augment=True)
+    dataFlat = numpy_merge_dimensions(dataCanon, 1, 3)
+    return corr_2D(dataFlat, est=est)
+
+
+# Compute average absolute value off-diagonal correlation (synchr. coeff)
+def avg_corr_3D(data, settings, est='corr'):
+    M = corr_3D(data, settings, est=est)
+    return np.nanmean(np.abs(offdiag_1D(M[0])))
 
 
 # Calculates the 1-sided autocorrelation of a discrete 1D dataset
 # Returned dataset has same length as input, first value normalized to 1.
-# TODO: Find better solution for NAN
-def autocorr1D(x):
+def autocorr_1D(x):
     N = len(x)
 
-    # Cheat - replace NAN's with random normal numbers with same mean and variance
+    # FIXME Cheat - replace NAN's with random normal numbers with same mean and variance
     xEff = np.copy(x)
     nanIdx = np.isnan(x)
     xEff[nanIdx] = np.random.normal(*mu_std(x), np.sum(nanIdx))
@@ -72,9 +65,35 @@ def autocorr1D(x):
     return np.correlate(xEff, xEff, 'full')[N - 1:] / N
 
 
-def crossCorr(data, settings, est='corr'):
+# Calculates autocorrelation. Any dimensions
+# TODO: Currently autocorrelation is averaged over other provided dimensions. Check if there is a more rigorous way
+def autocorr_3D(data, settings):
+    test_have_dim("autocorr_3D", settings['dim_order'], "s")
+
+    # Convert to canonical form
+    dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'rps', augment=True)
+    dataFlat = numpy_merge_dimensions(dataCanon, 0, 2)
+    dataThis = zscore(dataFlat)
+    return np.nanmean(np.array([autocorr_1D(d) for d in dataThis]), axis=0)
+
+
+# Calculates autocorrelation of unit time shift. Can handle nan's
+def autocorr_d1_3D(data, settings):
+    test_have_dim("autocorr_d1_3D", settings['dim_order'], "s")
+
+    # Convert to canonical form
+    dataCanon = numpy_transpose_byorder(data, settings['dim_order'], 'srp', augment=True)
+    dataZ = zscore(dataCanon)
+
+    dataZpre  = dataZ[:-1].flatten()
+    dataZpost = dataZ[1:].flatten()
+    return np.nanmean(dataZpre * dataZpost)
+
+
+# FIXME: Correct all TE-based procedures, to compute cross-correlation as a window sweep externally
+def cross_corr_3D(data, settings, est='corr'):
     '''
-    Compute cross-correlation of multivariate dataset for a range of lags
+    Compute cross-correlation of multivariate dataset for a fixed lag
 
     :param data: 2D or 3D matrix
     :param settings: A dictionary. 'min_lag_sources' and 'max_lag_sources' determine lag range.
@@ -82,47 +101,44 @@ def crossCorr(data, settings, est='corr'):
     :return: A matrix [3 x nSource x nTarget], where 3 stands for [Corr Value, Max Lag, p-value]
     '''
 
-    # Parse settings
-    haveTrials = len(data.shape) > 2
+    # Test that necessary dimensions have been provided
+    test_have_dim("autocorr_3D", settings['dim_order'], "p")
+    test_have_dim("autocorr_3D", settings['dim_order'], "s")
+
+    # Transpose dataset into comfortable form
+    dataOrd = numpy_transpose_byorder(data, settings['dim_order'], 'psr', augment=True)  # add trials dimension for simplicity
+
+    # Extract parameters
+    nNode, nTime = dataOrd.shape[:2]
     lagMin = settings['min_lag_sources']
     lagMax = settings['max_lag_sources']
 
-    # Transpose dataset into comfortable form
-    if haveTrials:
-        dataOrd = numpy_transpose_byorder(data, settings['dim_order'], 'psr')
-    else:
-        dataOrd = numpy_transpose_byorder(data, settings['dim_order'], 'ps')
-
-    # Extract dimensions
-    nNode, nTime = dataOrd.shape[:2]
-
     # Check that number of timesteps is sufficient to estimate lagMax
     if nTime <= lagMax:
-        raise ValueError('max lag', lagMax, 'cannot be estimated for number of timesteps', nTime)
+        raise ValueError('lag', lagMax, 'cannot be estimated for number of timesteps', nTime)
 
-    rezMat = np.zeros((3, nNode, nNode))
-    
     for lag in range(lagMin, lagMax+1):
-        xx = dataOrd[:, lag:]
-        yy = dataOrd[:, :nTime-lag]
+        rezMat = np.zeros((2, lagMax-lagMin+1, nNode, nNode))
 
-        if haveTrials:
-            corrThis, pThis = corr3D(xx, yy, est=est)
-        else:
-            corrThis, pThis = corr(xx, yy, est=est)
+        xx = numpy_merge_dimensions(dataOrd[:, lag:], 1, 3)
+        yy = numpy_merge_dimensions(dataOrd[:, :nTime-lag], 1, 3)
+        corrThis, pThis = corr_2D(xx, yy, est=est)
 
         # Only interested in x-y correlations, crop x-x and y-y
-        corrThis = corrThis[nNode:, :nNode]
-        pThis    = pThis[nNode:, :nNode]
-
-        # Keep estimate and lag if it has largest absolute value so far
-        idxCorr = np.abs(corrThis) > np.abs(rezMat[0])
-        rezMat[0, idxCorr] = corrThis[idxCorr]
-        rezMat[1, idxCorr] = lag
-        rezMat[2, idxCorr] = pThis[idxCorr]
-
-    # Apply bonferroni correction due to multiple lags test
-    nHypothesesLag = lagMax - lagMin + 1
-    rezMat[2] = bonferroni_correction(rezMat[2], nHypothesesLag)
+        rezMat[0, lag] = corrThis[nNode:, :nNode]
+        rezMat[1, lag] = pThis[nNode:, :nNode]
                         
     return rezMat
+
+
+# Correlation that works if some values in the dataset are NANs
+def corr_nan(x2D):
+    pass
+    # z2D = zscore(x2D, axis=1)
+    # nChannel, nData = x2D.shape
+    # rez = np.ones((nChannel, nChannel))
+    # for i in range(nChannel):
+    #     for j in range(i+1, nChannel):
+    #         rez[i][j] = np.nanmean(z2D[i] * z2D[j])
+    #         rez[j][i] = rez[i][j]
+    # return rez
