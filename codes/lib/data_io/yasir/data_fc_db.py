@@ -72,7 +72,7 @@ class DataFCDatabase :
     #     fbasenames = fileswalk[:, 1]
     #     print("Total user files in dataset", self.summaryTE["dataname"], "is", len(fbasenames))
     #
-    #     # Extract other info from basenames
+    #     # Extract other metric from basenames
     #     methodKeys = ["BivariateMI", "MultivariateMI", "BivariateTE", "MultivariateTE"]
     #     metaDict = {
     #         "mousename" : ["_".join(name.split('_')[:2]) for name in fbasenames],

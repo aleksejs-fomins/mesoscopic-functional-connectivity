@@ -288,7 +288,7 @@ def readTE_H5(fname, summary):
     return times, data[..., GAP_L:N_TIMES - GAP_R]
 
 
-# Extract info from folder name containing TE files
+# Extract metric from folder name containing TE files
 def parse_TE_folder(datapath):
     dataname = os.path.basename(datapath)
     downsampling, delayText, delay, windowText, window = dataname.split('_')
