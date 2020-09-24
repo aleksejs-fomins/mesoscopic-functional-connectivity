@@ -45,11 +45,10 @@ def approx_decay_conv(data, tau, dt):
 #
 # Can handle arbitrary dimension, as long as downsampling is done along the first dimension
 def downsample_int(x1, y1, nt):
+    assert len(x1) == len(y1), "Times array and selected axis of data array must match"
     nTimes1 = len(x1)
     nTimes2 = nTimes1 // nt
-    shape2 = y1.shape
-    assert shape2[0] == nTimes1, "Times array and selected axis of data array must match"
-    shape2[0] = nTimes2
+    shape2 = (nTimes2, ) + y1.shape[1:]
 
     x2 = np.zeros(nTimes2)
     y2 = np.zeros(shape2)

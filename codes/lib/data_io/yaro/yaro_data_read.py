@@ -9,20 +9,46 @@ from codes.lib.dict_lib import merge_dicts
 
 
 # Read data and behaviour matlab files given containing folder
-def read_neuro_perf(folderpath, verbose=True, withPerformance=True):
+def read_neuro_perf(folderpath, verbose=True, withPerformance=True, waitRetry=3, emulateBehaviour=False):
+    '''
+    :param folderpath:  Path to root folder of Yaro data
+    :param verbose:     Verbosity on/off
+    :param withPerformance:  If performance file should be read
+    :param waitRetry:   What to do if file not found: if None-abort, if number specified - wait that many seconds
+    :param emulateBehaviour: If behaviour file is not found, all trials will be assumed to be iGO
+    '''
+
     # Read MAT file from command line
     if verbose:
         print("Reading Yaro data from", folderpath)
+
     fname_data        = os.path.join(folderpath, "data.mat")
     fname_behaviour   = os.path.join(folderpath, "behaviorvar.mat")
     fpath_performance = os.path.join(folderpath, "Transfer Entropy")
-    
-    waitRetry = 3  # Seconds wait before trying to reload the file if it is not accessible
-    data        = loadmat(fname_data, waitRetry=waitRetry)['data']
-    nTrialsData = data.shape[0]
-    behavior    = loadmat(fname_behaviour, waitRetry=waitRetry)
-    behavior = {k : v for k, v in behavior.items() if k[0] != '_'}      # Get rid of useless fields in behaviour
 
+    # Reading Data
+    if waitRetry is None and not os.path.isfile(fname_data):
+        raise ValueError(fname_data, 'is not found')
+    else:
+        data        = loadmat(fname_data, waitRetry=waitRetry)['data']
+        nTrialsData = data.shape[0]
+
+    # Reading Behaviour
+    if emulateBehaviour:
+
+        behavior = {'iGO' : np.arange(nTrialsData).astype(int), 'iNOGO' : [], 'iFA' : [], 'iMISS' : [], 'trials': {}}
+    elif waitRetry is None and not os.path.isfile(fname_behaviour):
+        raise ValueError(fname_behaviour, 'is not found')
+    else:
+        behavior = loadmat(fname_behaviour, waitRetry=waitRetry)
+
+        # Get rid of useless fields in behaviour
+        behavior = {k : v for k, v in behavior.items() if k[0] != '_'}
+
+        # Convert trials structure to a dictionary
+        behavior['trials'] = merge_dicts([matstruct2dict(obj) for obj in behavior['trials']])
+
+    # Reading/calculating performance
     if withPerformance:
         if (nTrialsData < len(behavior['iGO']) + len(behavior['iNOGO'])):
             print("Warning: For", os.path.basename(folderpath), "nTrials inconsistent with behaviour", nTrialsData, len(behavior['iGO']), len(behavior['iNOGO']))
@@ -36,9 +62,6 @@ def read_neuro_perf(folderpath, verbose=True, withPerformance=True):
             performanceExt = loadmat(fname_performance, waitRetry=waitRetry)['performance']
             if performanceExt != performance:
                 print("Calculated performance", performance, "does not match external", performanceExt)
-    
-    # Convert trials structure to a dictionary
-    behavior['trials'] = merge_dicts([matstruct2dict(obj) for obj in behavior['trials']])
     
     # d_trials = matstruct2dict(behavior['trials'][0])
     # for i in range(1, len(behavior['trials'])):
