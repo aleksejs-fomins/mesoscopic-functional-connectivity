@@ -1,10 +1,13 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict
+# from collections import defaultdict
 import pandas as pd
 import seaborn as sns
 from statannot import add_stat_annotation
+
+from IPython.display import display
+from ipywidgets import IntProgress
 
 #from lib.plots.matplotblib_lib import bins_multi
 from lib.pandas_lib import get_one_row
@@ -12,9 +15,20 @@ from lib.plots import connectomics
 from lib.stat import graph_lib
 from lib.stat.stat_shared import log_pval_H0_shared_random
 from lib.signal_lib import resample
+from lib.data_io.fc_iterator import FCIterator
 
 
-def plot_generic(dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ext='.svg'):
+def _get_fc_data_rows(dataDB, rows, rng):
+    timesLst = []
+    dataLst = []
+    for idxFC, rowFC in rows.iterrows():
+        times, data = dataDB.get_fc_data(idxFC, rng)
+        timesLst += [times]
+        dataLst += [data]
+    return timesLst, dataLst
+
+
+def plot_generic(dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ext='.svg', verbose=False):
     connectomicsMetricsDict = {
         "connectivity_nconn_vs_time"         : connectomics.plot_fc_binary_vs_time,
         "connectivity_nconn_vs_days"         : connectomics.plot_fc_binary_vs_days,
@@ -33,38 +47,34 @@ def plot_generic(dataDB, pTHR, outpath, plotPrefix, rangesSec=None, ext='.svg'):
         str(dataDB.summaryTE["window"])]
     )
 
-    for dictSweep, rowsSweep in dataDB.mouse_iterator():
+    fciter = FCIterator(dataDB)
+    progBar = IntProgress(min=0, max=fciter.size(), description='Plotting FC files')
+    display(progBar)  # display the bar
+
+    for dictSweep, rowsSweep in fciter.iterator():
         sweepSuffix = '_'.join(dictSweep.values())
         outfname = os.path.join(outpath, '_'.join([plotPrefix, datasetSuffix, sweepSuffix]) + ext)
-        print("--", sweepSuffix)
-
-
-        def _get_fc_data_rows(rows, rng):
-            timesLst = []
-            dataLst = []
-            for idxFC, rowFC in rows.iterrows():
-                times, data = dataDB.get_fc_data(idxFC, rng)
-                timesLst += [times]
-                dataLst += [data]
-            return timesLst, dataLst
-
+        if verbose:
+            print("--", sweepSuffix)
 
         timesLstLst = []
         dataLstLst = []
         if rangesSec is None:
             rangeLabels = ["alltimes"]
-            timesLst, dataLst = _get_fc_data_rows(rowsSweep, None)
-            timesLst += [timesLst]
-            dataLst += [dataLst]
+            timesLst, dataLst = _get_fc_data_rows(dataDB, rowsSweep, None)
+            timesLstLst += [timesLst]
+            dataLstLst += [dataLst]
         else:
             rangeLabels = list(rangesSec.keys())
             for rng in rangesSec.values():
-                timesLst, dataLst = _get_fc_data_rows(rowsSweep, rng)
+                timesLst, dataLst = _get_fc_data_rows(dataDB, rowsSweep, rng)
                 timesLstLst += [timesLst]
                 dataLstLst += [dataLst]
 
         dataLabels = rowsSweep['mousekey']
         plotFunc(outfname, timesLstLst, dataLstLst, dataLabels, rangeLabels, pTHR)
+
+        progBar.value += 1
 
 
 # FIXME: Standardize rangesSec to dict
