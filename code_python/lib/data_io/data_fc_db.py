@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import itertools
 
 from os.path import basename, dirname, join
 
@@ -87,7 +86,6 @@ class DataFCDatabase :
             key : sumByMouse(dataFrame) for key, dataFrame in self.metaDataFrames.items()
         }, index=self.mice)
 
-
     # User selects multiple sets of H5 files, corresponding to different datasets
     # Parse filenames and get statistics of files in each dataset
     def _find_parse_te_files(self, datapath):
@@ -122,7 +120,6 @@ class DataFCDatabase :
         }
         self.summaryTE.update(summaryTEExtra)
 
-
     # Channel labels are brain regions associated to each channel index
     # The channel labels need not be consistent across mice, or even within one mouse
     def _find_parse_channel_labels(self, path):
@@ -146,7 +143,6 @@ class DataFCDatabase :
         self.metaDataFrames['neuro'] = pd.DataFrame(neuroDict)
         self.mice.update(set(self.metaDataFrames['neuro']['mousename']))
 
-
     def _find_parse_paw_files(self, path):
         paw_paths = getfiles_walk(path, ["deltaI_paw.mat"])
         paw_data = [[
@@ -159,7 +155,6 @@ class DataFCDatabase :
         paw_dict = {k: v for k, v in zip(['mousekey', 'path', 'mousename', 'date'], np.array(paw_data).T)}
         self.metaDataFrames['paw'] = pd.DataFrame(paw_dict)
         self.mice.update(set(self.metaDataFrames['paw']['mousename']))
-
 
     def _find_parse_lick_files(self, path):
         lick_paths = getfiles_walk(path, ["lick_traces.mat"])
@@ -174,7 +169,6 @@ class DataFCDatabase :
         self.metaDataFrames['lick'] = pd.DataFrame(lick_dict)
         self.mice.update(set(self.metaDataFrames['lick']['mousename']))
 
-
     def _find_parse_whisk_files(self, path):
         whisk_paths = getfiles_walk(path, ["whiskAngle.mat"])
         whisk_data = [[
@@ -187,7 +181,6 @@ class DataFCDatabase :
         whisk_dict = {k: v for k, v in zip(['mousekey', 'path', 'mousename', 'date'], np.array(whisk_data).T)}
         self.metaDataFrames['whisk'] = pd.DataFrame(whisk_dict)
         self.mice.update(set(self.metaDataFrames['whisk']['mousename']))
-
 
     def read_te_files(self):
         if "TE" in self.metaDataFrames.keys():
@@ -203,7 +196,6 @@ class DataFCDatabase :
                 progBar.value += 1
         else:
             print("No TE files loaded, skipping reading part")
-
 
     def read_neuro_files(self):
         if 'neuro' in self.metaDataFrames.keys():
@@ -244,7 +236,6 @@ class DataFCDatabase :
         else:
             print("No Neuro files loaded, skipping reading part")
 
-
     def read_resample_paw_files(self):
         if 'paw' in self.metaDataFrames.keys():
             nPawFiles = self.metaDataFrames['paw'].shape[0]
@@ -281,7 +272,6 @@ class DataFCDatabase :
         else:
             print("No lick files loaded, skipping reading part")
 
-
     def read_resample_whisk_files(self):
         if 'whisk' in self.metaDataFrames.keys():
             nWhiskFiles = self.metaDataFrames['whisk'].shape[0]
@@ -294,7 +284,6 @@ class DataFCDatabase :
                 progBar.value += 1
         else:
             print("No whisk files loaded, skipping reading part")
-
 
     # Mark days as naive or expert based on performance threshold
     def mark_days_expert_naive(self, pTHR):
@@ -317,18 +306,14 @@ class DataFCDatabase :
         self.metaDataFrames['neuro']['deltaDays'] = deltaDays
         self.metaDataFrames['neuro']['deltaDaysCentered'] = deltaDaysCentered
 
-
     def get_channel_labels(self, mousename):
         return self.channelLabelsDict[mousename]
-
 
     def get_nchannels(self, mousename):
         return len(self.channelLabelsDict[mousename])
 
-
     def get_rows(self, frameName, coldict):
         return filter_rows_colvals(self.metaDataFrames[frameName], coldict)
-
 
     # Find FC data for specified rows, then crop to selected time range
     def get_fc_data(self, idx, rangeSec=None):
@@ -339,16 +324,3 @@ class DataFCDatabase :
         else:
             rng = slice_sorted(timesThis, rangeSec)
             return timesThis[rng[0]:rng[1]], fcThis[..., rng[0]:rng[1]]
-
-
-    # Provide rows for all sessions of the same mouse, iterating over combinations of other anaylsis parameters
-    def mouse_iterator(self):
-        sweepCols = ["mousename",  "analysis", "trial", "range", "method"]
-        sweepValues = [self.summaryTE[colname].keys() for colname in sweepCols]
-        sweepProduct = list(itertools.product(*sweepValues))
-
-        for sweepComb in sweepProduct:
-            sweepCombDict = dict(zip(sweepCols, sweepComb))
-            rows = self.get_rows('TE', sweepCombDict)
-            if rows.shape[0] > 0:
-                yield sweepCombDict, rows

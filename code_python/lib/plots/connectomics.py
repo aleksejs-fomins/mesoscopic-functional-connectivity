@@ -5,6 +5,7 @@ from lib.array_lib import slice_sorted
 from lib.stat import graph_lib
 from lib.signal_lib import resample, resample_shortest_linear
 
+from lib.stat.stat_lib import discrete_distr_to_cdf, discrete_empirical_pdf_from_sample
 
 def _get_binary_conn(data, pTHR):
     return graph_lib.is_conn(data[2], pTHR)
@@ -12,7 +13,7 @@ def _get_binary_conn(data, pTHR):
 
 def _get_fc_from_data(data, pTHR):
     teZeroNAN = np.copy(data[0])
-    teZeroNAN[~graph_lib.is_conn(p, pTHR)] = 0  # Set TE of all non-existing connections to zero
+    teZeroNAN[~graph_lib.is_conn(data[2], pTHR)] = 0  # Set TE of all non-existing connections to zero
     return teZeroNAN
 
 
@@ -23,17 +24,18 @@ def _get_binary_metric_dict():
         #         'out degree'              : graph_lib.degree_out,
         #         'total degree'            : graph_lib.degree_tot,
         #         'reciprocal degree'       : graph_lib.degree_rec,
-        'cc-total-normalized'       : lambda M: np.mean(
-            graph_lib.clustering_coefficient(M, kind='tot', normDegree=True)),
-        'cc-total-unnormalized'     : lambda M: np.mean(
-            graph_lib.clustering_coefficient(M, kind='tot', normDegree=False)),
-        'cc-in-normalized'          : lambda M: np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=True)),
-        'cc-in-unnormalized'        : lambda M: np.mean(
-            graph_lib.clustering_coefficient(M, kind='in', normDegree=False)),
-        'cc-out-normalized'         : lambda M: np.mean(
-            graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
-        'cc-out-unnormalized'       : lambda M: np.mean(
-            graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
+        'cc-total-normalized'       : lambda M:
+            np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=True)),
+        'cc-total-unnormalized'     : lambda M:
+            np.mean(graph_lib.clustering_coefficient(M, kind='tot', normDegree=False)),
+        'cc-in-normalized'          : lambda M:
+            np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=True)),
+        'cc-in-unnormalized'        : lambda M:
+            np.mean(graph_lib.clustering_coefficient(M, kind='in', normDegree=False)),
+        'cc-out-normalized'         : lambda M:
+            np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=True)),
+        'cc-out-unnormalized'       : lambda M:
+            np.mean(graph_lib.clustering_coefficient(M, kind='out', normDegree=False))
     }
 
 
@@ -61,7 +63,7 @@ def _plot_generic_vs_time(timesLst, dataLst, metricDict, dataFunc, pTHR):
 
     # Metrics by time
     plt.rcParams.update({'font.size': 16})
-    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10))
+    fig, ax = plt.subplots(ncols=nMetrics, figsize=(10*nMetrics, 10), tight_layout=True)
     for iMetric, (metricName, metricFunc) in enumerate(metricDict.items()):
 
         # Note: Some files are a bit shorter than others. We truncate time to the shortest
@@ -78,9 +80,9 @@ def _plot_generic_vs_time(timesLst, dataLst, metricDict, dataFunc, pTHR):
 
         ax[iMetric].plot(timesResampled, metricMean)
         ax[iMetric].fill_between(timesResampled, metricMean - metricStd, metricMean + metricStd, alpha=0.3)
-        ax[iMetric].set_title("nPoints=" + str(nFiles))
+        ax[iMetric].set_title(metricName + "; nPoints=" + str(nFiles))
         ax[iMetric].set_xlabel("time, seconds")
-        ax[iMetric].set_ylabel(metricName)
+        # ax[iMetric].set_ylabel(metricName)
 
     return fig, ax
 
@@ -94,15 +96,17 @@ def plot_fc_binary_vs_time(outnameBase, timesLst, dataLst, dataLabelLst, rangeLa
         fig, ax = _plot_generic_vs_time(timeRangeLst, dataRangeLst, _get_binary_metric_dict(), _get_binary_conn, pTHR)
 
         # Special properties for number of connections
-        nChannel = dataLst[0][0].shape[0]
+        nChannel = dataLst[0][0].shape[1]
         have_bte = "BivariateTE" in outname
         ax[0].axhline(y=4.0 * nChannel / 12 if have_bte else 1.0 * nChannel / 12, linestyle="--", label='chance', linewidth=2.0)
-        ax[0].set_xlim(0, 10)
-        ax[0].set_ylim(0, nChannel*(nChannel-1))
+        # ax[0].set_xlim(0, 10)
+        # ax[0].set_ylim(0, nChannel*(nChannel-1))
+        ax[0].legend()
 
         # ax[iMetric].plot(times, metricByTime, label=label[12:17], color=((iFile / nFiles), 0, 0))
         # ax[iMetric].legend()
         #print("Saving figure to", outname)
+
         plt.savefig(outname)
         plt.close()
 
@@ -128,8 +132,11 @@ def plot_fc_binary_vs_days(outname, timesLst, dataLst, dataLabelLst, rangeLabelL
     binaryMetrics = _get_binary_metric_dict()
     nMetrics = len(binaryMetrics)
     nFiles = len(dataLabelLst)
-    
+
+    plt.rcParams.update({'font.size': 16})
     fig, ax = plt.subplots(nrows=2, ncols=nMetrics, figsize=(10*nMetrics, 2*10))
+    ax[0, 0].set_ylabel("Strategy 1")
+    ax[1, 0].set_ylabel("Strategy 2")
 
     for rangeLabel, timeRangeLst, dataRangeLst in zip(rangeLabelLst, timesLst, dataLst):
         metricArrStrat1    = np.zeros((nMetrics, nFiles))
@@ -160,11 +167,11 @@ def plot_fc_binary_vs_days(outname, timesLst, dataLst, dataLabelLst, rangeLabelL
             ax[1, iMetric].fill_between(pltx, plt2ymin, plt2ymax, alpha=0.3)#, label=rangeName)
 
     # Set labels on axis
-    nChannel = dataLst[0][0].shape[0]
+    nChannel = dataLst[0][0].shape[1]
     for iStrat in range(2):
         ax[iStrat, 0].set_ylim(0, nChannel*(nChannel-1))
         for iMetric, metricName in enumerate(binaryMetrics.keys()):
-            ax[iStrat, iMetric].set_ylabel(metricName)
+            ax[iStrat, iMetric].set_title(metricName)
             ax[iStrat, iMetric].set_xticks(list(range(nFiles)))
             ax[iStrat, iMetric].set_xticklabels([label[12:17] for label in dataLabelLst], rotation='vertical')
             ax[iStrat, iMetric].legend()
@@ -234,7 +241,7 @@ def plot_fc_mag_vs_days(outname, timesLst, dataLst, dataLabelLst, rangeLabelLst,
 #         ax.plot(nConnPerSession, label=rangeLabel+'_total')
 #         ax.plot(sharedConn, '--', label=rangeLabel+'_shared')
 #
-#     nChannel = dataLst[0][0].shape[0]
+#     nChannel = dataLst[0][0].shape[1]
 #     ax.set_ylim(0, nChannel*(nChannel-1))
 #     ax.set_xticks(list(range(nFiles)))
 #     ax.set_xticklabels([label[12:17] for label in dataLabelLst])
@@ -244,13 +251,13 @@ def plot_fc_mag_vs_days(outname, timesLst, dataLst, dataLabelLst, rangeLabelLst,
     
     
 def plot_fc_binary_avg_vs_time(outname, timesLst, dataLst, dataLabelLst, rangeLabelLst, pTHR):
-    nChannel = dataLst[0][0].shape[0]
+    nChannel = dataLst[0][0].shape[1]
 
     fig, ax = plt.subplots(ncols=3, figsize=(30, 10))
     for rangeLabel, dataRangeLst in zip(rangeLabelLst, dataLst):
         freqConnRange = []
         labelsFiltered = []
-        for idxFile, (data, label) in enumerate(zip(dataLst, dataLabelLst)):
+        for idxFile, (data, label) in enumerate(zip(dataRangeLst, dataLabelLst)):
             if nChannel in (12, 48):
                 labelsFiltered += [label]
                 binaryConnMat1D = graph_lib.offdiag_1D(_get_binary_conn(data, pTHR))
@@ -294,21 +301,30 @@ def plot_fc_binary_avg_vs_time(outname, timesLst, dataLst, dataLabelLst, rangeLa
     plt.close()
 
 
-
-def plot_fc_vs_performance(outname, timesLst, dataLst, dataLabelLst, rangesSec, pTHR, timestep):
+def plot_fc_vs_performance(outname, timesLst, dataLst, dataLabelLst, rangeLabelLst, pTHR):
     plt.figure(figsize=(10, 10))
-    
-    nFiles = len(dataLst)
-    for idxFile, (data, label) in enumerate(zip(dataLst, dataLabelLst)):
-        te, lag, p = data
-        teflat = te[graph_lib.is_conn(p, pTHR)]
-        
-        plt.hist(teflat, bins='auto', label=label[12:17], color=((idxFile / nFiles), 0, 0), alpha=0.3)
+
+    for rangeLabel, dataRangeLst in zip(rangeLabelLst, dataLst):
+        nFiles = len(dataRangeLst)
+
+        for idxFile, (data, label) in enumerate(zip(dataRangeLst, dataLabelLst)):
+            te, lag, p = data
+            teflat = te[graph_lib.is_conn(p, pTHR)]
+
+            pdf = discrete_empirical_pdf_from_sample(teflat)
+            cdf = discrete_distr_to_cdf(pdf)
+            cdfX = list(cdf.keys())
+            cdfY = list(cdf.values())
+
+            plt.plot(cdfX, cdfY, label=rangeLabel + "_" + label[12:17], color=((idxFile / nFiles), 0, 0))
+
+            # plt.hist(teflat, bins='auto', label=rangeLabel + "_" + label[12:17], color=((idxFile / nFiles), 0, 0), alpha=0.3)
+
 
     plt.xscale("log")
-    plt.xlim([1.0e-3,1])
+    # plt.xlim([1.0e-3,1])
     plt.xlabel("TE")
-    plt.ylabel("Count")
+    # plt.ylabel("Count")
     plt.legend()
     plt.savefig(outname)
     plt.close()

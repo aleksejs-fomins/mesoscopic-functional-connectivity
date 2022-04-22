@@ -64,6 +64,7 @@ class InfoLib:
 
 
     def wrapper_TC(self):
+        pass
 
 
     def _sweep(self, data, metricFunc, axis, settings):
