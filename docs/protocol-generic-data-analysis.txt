@@ -1,0 +1,47 @@
+Important:: calc H of zscored data!!!
+
+=======================
+1. MONO - Each channel Independently
+=======================
+Questions:
+    * Are channels different from each other
+    
+Methods:
+    * mu, std, H_1D
+    
+Slices:
+    * func(channel); flatten(time, trial)
+    * func(channel, trial)
+    
+Decisions:
+    * z-score wrt flatten, trial, or sth inbetween? Purpose to eliminate experimental drifts
+    
+=======================
+1. INSTA - Independent time
+=======================
+Questions:
+    * Are timesteps different from each other
+
+Methods:
+    * H_ND, Synchr, evalDim
+    
+Slices:
+    * flatten(time, trial)
+    * func(trial)
+    * func(time)
+    
+Decisions:
+    * Make sure that result of (evalDim < dim) is expected, truncate
+    * Ensure synchr, H are not pathological
+    * Check if trends are already visible
+    
+
+=======================
+3. DYNAMIC - Dependent time
+=======================
+Questions:
+    * How well can region be explained by its own past?
+    * How well can regions be explained by autoregressive process of varying length?
+
+Methods:
+
